@@ -13,7 +13,7 @@ async def create_pool():
         )
         return pool
     except Exception as e:
-        logging.error(f'error7669804: {e}')
+        logging.error(f'"create_pool error": {e}')
 async def init_db(pool):
     try:
         async with pool.acquire() as conn:
@@ -24,12 +24,5 @@ async def init_db(pool):
                             fullname TEXT
                         );
                     """)
-            await conn.execute("""
-                        CREATE TABLE IF NOT EXISTS groups (
-                            groupid BIGINT PRIMARY KEY,
-                            group_username TEXT UNIQUE,
-                            group_name TEXT
-                        );
-                    """)
     except Exception as e:
-        logging.error(f'error984962: {e}')
+        logging.error(f'"init_db error": {e}')
