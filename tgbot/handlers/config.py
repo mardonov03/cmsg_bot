@@ -1,11 +1,12 @@
 from aiogram.types import Message
-from tgbot.business.config import UsersClassBusiness
+from tgbot.models.config import MainModel, UsersModel
 
 async def handle_start(message: Message, **kwargs) -> None:
-    business: UsersClassBusiness = kwargs['business']
+
+    usersmodel: UsersModel = kwargs['usersmodel']
 
     userid = message.from_user.id
-    user_data = await business.get_user(userid)
+    user_data = await usersmodel.get_user(userid)
     if user_data:
         await message.answer(f"Привет, {user_data['username']}! Ваш ID: {userid}.")
     else:

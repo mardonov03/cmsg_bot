@@ -1,13 +1,13 @@
 from aiogram import BaseMiddleware
-from tgbot.business.config import MainClassBusiness
+from tgbot.models.config import MainModel
 
 class MainClass(BaseMiddleware):
-    def __init__(self, business: MainClassBusiness):
+    def __init__(self, models: MainModel):
         super().__init__()
-        self.business = business
+        self.models = models
 
     async def __call__(self, handler, event, data):
-        data['business'] = self.business
+        data['models'] = self.models
         return await handler(event, data)
 
 class UsersClass(MainClass):
