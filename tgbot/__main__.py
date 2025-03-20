@@ -10,7 +10,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from tgbot import handlers
 from tgbot.data import config
 from tgbot.database.config import create_pool, init_db
-from tgbot.models.config import Users
+from tgbot.models.config import MainModel, UsersModel
 
 async def setup_logging():
     log_level = logging.INFO
@@ -34,11 +34,15 @@ async def setup_aiogram(dp: Dispatcher) -> None:
 
 async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
     try:
-        pool = create_pool()
-        user_model = Users()
+        pool = await create_pool()
+
+        mainmodel = MainModel(pool, bot)
+
+        usersmodel = UsersModel(pool, bot)
 
         dispatcher['db'] = pool
-        dispatcher['usermodel'] = user_model
+        dispatcher['mainmodel'] = mainmodel
+        dispatcher['usersmodel'] = usersmodel
 
         await init_db(pool)
         await setup_aiogram(dispatcher)
