@@ -10,7 +10,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from tgbot import handlers
 from tgbot.data import config
 from tgbot.database.config import create_pool, init_db
-from tgbot.models.config import MainModel, UsersModel
+from tgbot.models.config import MainModel, UsersModel, GroupModel
 
 async def setup_logging():
     log_level = logging.INFO
@@ -37,15 +37,15 @@ async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
         pool = await create_pool()
 
         mainmodel = MainModel(pool, bot)
-
         usersmodel = UsersModel(pool, bot)
+        groupmodel = GroupModel(pool, bot)
 
         dispatcher['db'] = pool
         dispatcher['mainmodel'] = mainmodel
         dispatcher['usersmodel'] = usersmodel
+        dispatcher['groupmodel'] = groupmodel
 
         await init_db(pool)
-        await setup_aiogram(dispatcher)
         logging.info("Bot started")
     except Exception as e:
         logging.error(f'Error during startup: {e}')
@@ -76,12 +76,12 @@ async def main():
 
         storage = MemoryStorage()
 
-        dp = Dispatcher(
-            storage=storage,
-        )
+        dp = Dispatcher(storage=storage)
 
         dp.startup.register(aiogram_on_startup_polling)
         dp.shutdown.register(aiogram_on_shutdown_polling)
+
+        await setup_aiogram(dp)
 
         await dp.start_polling(bot)
     except Exception as e:
