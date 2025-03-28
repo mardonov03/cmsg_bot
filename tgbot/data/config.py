@@ -7,3 +7,5 @@ load_dotenv()
 BOT_TOKEN: str = os.getenv('BOT_TOKEN')
 
 DATABASE_URL: str = os.getenv('DATABASE_URL')
+
+WEBHOOK_URL: str = os.getenv('WEBHOOK_URL')
