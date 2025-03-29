@@ -4,8 +4,8 @@ from aiogram.types import Message, ChatMemberUpdated
 from tgbot.models.config import UsersModel, GroupModel
 from aiogram.fsm.context import FSMContext
 from tgbot.states.config import UserState
-
-
+import opennsfw2 as n2
+import os
 
 async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
     if message.chat.type in ['group', 'supergroup']:
@@ -205,4 +205,79 @@ async def register_creator(event: ChatMemberUpdated, **kwargs) -> None:
                 return
     except Exception as e:
         logging.error(f'"on_bot_added error": {e}')
+
+
+async def register_message(message: Message) -> None:
+    print('type:', message.content_type)
+    if message.content_type == 'text':
+        print('\ntext:', message.text)
+    if message.content_type == 'sticker':
+        print('sticker:', message.sticker)
+        print('sticker:', message.sticker.file_unique_id)
+    if message.content_type == 'video':
+        print('video:', message.video)
+        print('video:', message.video.file_unique_id)
+    if message.content_type == 'animation':
+        print('animation:', message.animation)
+        print('animation:', message.animation.file_unique_id)
+    if message.content_type == 'voice':
+        print('voice:', message.voice)
+        print('voice:', message.voice.file_unique_id)
+    if message.content_type == 'document':
+        print('document:', message.document)
+        print('document:', message.document.file_unique_id)
+    if message.content_type == 'photo':
+        print('photo:', message.photo)
+    if message.content_type == 'video_note':
+        print('video_note:', message.video_note)
+
+    if message.content_type == 'photo':
+        os.makedirs("photos", exist_ok=True)
+        photo = message.photo[-1]
+        file_info = await message.bot.get_file(photo.file_id)
+        file_path = file_info.file_path
+
+        local_path = f"photos/temp_{photo.file_unique_id}.jpg"
+        await message.bot.download_file(file_path, local_path)
+
+        nsfw_probability = n2.predict_image(local_path)
+
+        os.remove(local_path)
+        print(f"NSFW: {nsfw_probability:.2%}")
+        nsfw, prots = f'{nsfw_probability * 100}'.split('.')
+        print(nsfw)
+        if int(nsfw) >= 20:
+            photo_id = photo.file_unique_id
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+## Бу хаммаси тест учун ози ботта сообщениялани регистрация клнади очрб ташалмили очрш групада болади
+    # try:
+    #     if event.new_chat_member.user.id == event.bot.id:
+    #         groupid = event.chat.id
+    #
+    #         try:
+    #             groupmodel: GroupModel = kwargs['groupmodel']
+    #
+    #             result = await groupmodel.get_group(groupid)
+    #             if not result:
+    #                 await groupmodel.add_group(groupid)
+    #         except Exception as e:
+    #             logging.error(f'"register_creator (add bot to db) error": {e}')
+    #
+    #         admins = await event.bot.get_chat_administrators(groupid)
+    #
+    #         creator = next((i for i in admins if i.status == 'creator'), None)
+    #
+    #         if not creator:
+    #             await event.bot.send_message(event.chat.id, 'Нам не удалось найти создателья группы.')
+    #             return
+    #
+    #         usersmodel: UsersModel = kwargs['usersmodel']
+    #
+    #         res = await usersmodel.add_creator(groupid, creator.user.id)
+    #
+    #         if not res:
+    #             await event.bot.send_message(event.chat.id, 'Не удалось назначит администратора. Попробуйте заново')
+    #             return
+    # except Exception as e:
+    #     logging.error(f'"on_bot_added error": {e}')
 
