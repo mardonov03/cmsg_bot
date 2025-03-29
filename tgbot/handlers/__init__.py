@@ -1,6 +1,6 @@
 from aiogram import Router
 from aiogram.filters import Command, ChatMemberUpdatedFilter, IS_NOT_MEMBER, IS_MEMBER, ADMINISTRATOR, StateFilter, KICKED
-from tgbot.handlers.config import handle_start, on_bot_added, register_creator, handle_stop, select_group, on_bot_deleted
+from tgbot.handlers.config import handle_start, on_bot_added, register_creator, handle_stop, select_group, on_bot_deleted, register_message
 from tgbot.states.config import UserState
 
 def setup() -> Router:
@@ -17,5 +17,5 @@ def setup() -> Router:
 
     router.message.register(select_group, StateFilter(UserState.select_group_state))
 
-    router.message.register(register_message, )
+    router.message.register(register_message)
     return router
