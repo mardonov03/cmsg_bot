@@ -51,26 +51,66 @@ async def init_db(pool):
             """)
 
             await conn.execute("""
-                CREATE TABLE IF NOT EXISTS bangifs (
+                CREATE TABLE IF NOT EXISTS ban_texsts (
                     groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
-                    gif TEXT NOT NULL,
-                    PRIMARY KEY (groupid, gif)
+                    text TEXT NOT NULL,
+                    PRIMARY KEY (groupid, text)
                 );
             """)
 
             await conn.execute("""
-                CREATE TABLE IF NOT EXISTS banstickers (
+                CREATE TABLE IF NOT EXISTS ban_stickers (
                     groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
-                    sticker TEXT NOT NULL,
-                    PRIMARY KEY (groupid, sticker)
+                    sticker_id TEXT NOT NULL,
+                    PRIMARY KEY (groupid, sticker_id)
                 );
             """)
 
             await conn.execute("""
-                CREATE TABLE IF NOT EXISTS banwords (
+                CREATE TABLE IF NOT EXISTS ban_animations (
                     groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
-                    word TEXT NOT NULL,
-                    PRIMARY KEY (groupid, word)
+                    animation_id TEXT NOT NULL,
+                    PRIMARY KEY (groupid, animation_id)
+                );
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS ban_voices (
+                    groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
+                    voice_id TEXT NOT NULL,
+                    PRIMARY KEY (groupid, voice_id)
+                );
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS ban_documents (
+                    groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
+                    document_id TEXT NOT NULL,
+                    PRIMARY KEY (groupid, document_id)
+                );
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS ban_photos (
+                    groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
+                    photo_id TEXT NOT NULL,
+                    PRIMARY KEY (groupid, photo_id)
+                );
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS ban_videos (
+                    groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
+                    video_id TEXT NOT NULL,
+                    PRIMARY KEY (groupid, video_id)
+                );
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS ban_video_notes (
+                    groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
+                    video_note_id TEXT NOT NULL,
+                    PRIMARY KEY (groupid, video_note_id)
                 );
             """)
 
