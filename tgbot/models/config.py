@@ -59,7 +59,7 @@ class UsersModel(MainModel):
     async def last_group_update(self, groupid, userid):
         try:
             async with self.pool.acquire() as conn:
-                await conn.execute('UPDATE user_states SET last_group_update = $1 WHERE userid =$2', groupid, userid)
+                await conn.execute('INSERT INTO user_states (userid, last_group_update) VALUES ($1, $2) ON CONFLICT (userid) DO UPDATE SET last_group_update = EXCLUDED.last_group_update', userid, groupid)
                 return True
         except Exception as e:
             logging.error(f'"last_group_update error": {e}')
@@ -101,7 +101,7 @@ class GroupModel(MainModel):
     async def turn_on_off_bot(self, groupid: int, newstatus: bool):
         try:
             async with self.pool.acquire() as conn:
-                await conn.execute('UPDATE group_states SET bot_status =$1 WHERE groupid = $2', newstatus, groupid)
+                await conn.execute('INSERT INTO group_states (groupid, bot_status) VALUES ($1, $2) ON CONFLICT (groupid) DO UPDATE SET bot_status = EXCLUDED.bot_status', groupid, newstatus)
                 return newstatus
         except Exception as e:
             logging.error(f'"turn-on_bot error": {e}')
@@ -127,7 +127,7 @@ class GroupModel(MainModel):
             result = await self.bot.get_chat_member(groupid, userid)
             return {'status': 'ok', 'result': result.status}
         except Exception as e:
-            logging.error(f'"is_bot_admin error": {e}')
+            logging.error(f'"is_user_creator error": {e}')
             return {'status': 'error', 'result': ''}
 
     async def get_bot_privileges(self, groupid) -> dict:
@@ -145,4 +145,26 @@ class GroupModel(MainModel):
         except Exception as e:
             logging.error(f'"get_bot_privileges error": {e}')
             return {'status': 'error', 'missed': []}
+
+class MessagesModel(MainModel):
+
+    async def get_last_group(self, userid):
+        try:
+            async with self.pool.acquire() as conn:
+                last_group = await conn.fetchval('SELECT last_group_update from user_states WHERE userid = $1', userid)
+                return {'status': 'ok', 'last_group_update': last_group}
+        except Exception as e:
+            logging.error(f'get_last_group error: {e}')
+            return {'status': 'error', 'last_group_update': ''}
+
+    async def register_message_text(self, groupid, text):
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute('INSERT INTO ban_texsts (groupid, text) VALUES ($1, $2) ON CONFLICT (groupid, text) DO NOTHING', groupid, text)
+            return {'status': 'ok', 'groupid': 'groupid', 'text': text}
+        except Exception as e:
+            logging.error(f'register_message_text error: {e}')
+
+
+
 
