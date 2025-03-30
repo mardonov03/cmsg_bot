@@ -17,7 +17,7 @@ def setup() -> Router:
 
     router.message.register(select_group, StateFilter(UserState.select_group_state))
 
-    router.message.register(RegisterMessage.register_message_test, F.chat.type == "private")
+    router.message.register(RegisterMessage.register_message, F.chat.type == "private")
 
     router.message.register(CheckMessage.check_message, (F.chat.type == "group") | (F.chat.type == "supergroup"))
 

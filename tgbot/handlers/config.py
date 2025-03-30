@@ -85,6 +85,7 @@ async def select_group(message:Message, state:FSMContext, **kwargs):
                 await message.answer('Группа выбрана удачно', reply_markup=cancel())
             else:
                 await message.answer('Нам не удалось выбрать группу', reply_markup=cancel())
+            await state.clear()
         except Exception as e:
             logging.error(f'"select_group error": {e}')
 
@@ -291,7 +292,7 @@ class RegisterMessage():
 
 
     @staticmethod
-    async def register_message(message: Message, state:FSMContext, **kwargs) -> None:
+    async def register_message(message: Message, state:FSMContext, bot, **kwargs) -> None:
         userid = message.from_user.id
 
         if message.chat.type != 'private':
@@ -321,44 +322,46 @@ class RegisterMessage():
 
         if is_user_creator['result'] == 'creator':
             group = await groupmodel.get_group(last_group['last_group_update'])
+            invite_link = await bot.export_chat_invite_link(last_group['last_group_update'])
 
             if message.content_type == 'text':
-                await messagesmodel.register_message_text(last_group['last_group_update'], message.text)
-                await message.answer(f'📄Слово (<b>{message.text}</b>) добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.text)
+                await message.answer(f'📄Слово (<b>{message.text}</b>) добавлено для группы <a href="{invite_link}"><b>{group["name"]}</b></a>',parse_mode='HTML', disable_web_page_preview=True)
+
                 return
 
             elif message.content_type == 'sticker':
-                await messagesmodel.register_message_text(last_group['last_group_update'], message.sticker.file_unique_id)
-                await message.answer(f'🔮Стикер добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.sticker.file_unique_id)
+                await message.answer(f'🔮Стикер добавлен для группы <a href="{invite_link}"><b>{group["name"]}</b></a>', parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'animation':
-                await messagesmodel.register_message_text(last_group['last_group_update'], message.animation.file_unique_id)
-                await message.answer(f'🔮Гиф добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.animation.file_unique_id)
+                await message.answer(f'🎞Гиф добавлен для группы <a href="{invite_link}"><b>{group["name"]}</b></a>', parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'voice':
-                await messagesmodel.register_message_text(last_group['last_group_update'], message.voice.file_unique_id)
-                await message.answer(f'🔮Голосовое сообщение добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.voice.file_unique_id)
+                await message.answer(f'🎙Голосовое сообщение добавлен для группы <a href="{invite_link}"><b>{group["name"]}</b></a>', parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'document':
-                await messagesmodel.register_message_text(last_group['last_group_update'], message.document.file_unique_id)
-                await message.answer(f'🔮Документ добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.document.file_unique_id)
+                await message.answer(f'💾Документ добавлен для группы <a href="{invite_link}"><b>{group["name"]}</b></a>', parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'photo':
                 photo = message.photo[-1]
-                await messagesmodel.register_message_text(last_group['last_group_update'], photo.file_unique_id)
-                await message.answer(f'🔮Фотография добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, photo.file_unique_id)
+                await message.answer(f'🖼Фотография добавлен для группы <a href="{invite_link}"><b>{group["name"]}</b></a>', parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'video':
-                await messagesmodel.register_message_text(last_group['last_group_update'], message.video.file_unique_id)
-                await message.answer(f'🔮видео добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.video.file_unique_id)
+                await message.answer(f'📹видео добавлен для группы <a href="{invite_link}"><b>{group["name"]}</b></a>', parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'video_note':
-                await messagesmodel.register_message_text(last_group['last_group_update'], message.video_note.file_unique_id)
-                await message.answer(f'🔮Видео кружок добавлен для группы <b>{group['name']}</b>', parse_mode='HTML')
+                await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.video_note.file_unique_id)
+                await message.answer(f'📷Видео кружок добавлен для группы <a href="{invite_link}"><b>{group["name"]}</b></a>', parse_mode='HTML', disable_web_page_preview=True)
                 return
