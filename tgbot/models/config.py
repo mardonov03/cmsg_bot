@@ -157,14 +157,11 @@ class MessagesModel(MainModel):
             logging.error(f'get_last_group error: {e}')
             return {'status': 'error', 'last_group_update': ''}
 
-    async def register_message_text(self, groupid, text):
+    async def register_ban_message(self, groupid, message_type, message_id):
         try:
             async with self.pool.acquire() as conn:
-                await conn.execute('INSERT INTO ban_texsts (groupid, text) VALUES ($1, $2) ON CONFLICT (groupid, text) DO NOTHING', groupid, text)
-            return {'status': 'ok', 'groupid': 'groupid', 'text': text}
+                await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id) DO NOTHING', groupid, message_id, message_type)
+            return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
         except Exception as e:
-            logging.error(f'register_message_text error: {e}')
-
-
-
-
+            logging.error(f'register_ban_message error: {e}')
+            return {'number': 'error', 'groupid': '', 'message_id': '', 'message_type': ''}
