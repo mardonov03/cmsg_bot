@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="update 2">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/handlers/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/photos/temp_AQAD9OsxG5GB6Up-.jpg" beforeDir="false" />
-    </list>
+    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="register_message 1" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -146,7 +142,15 @@
       <option name="project" value="LOCAL" />
       <updated>1743376109413</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="register_message 1">
+      <option name="closed" value="true" />
+      <created>1743380648823</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1743380648823</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -155,6 +159,7 @@
     <MESSAGE value="message register" />
     <MESSAGE value="update 1" />
     <MESSAGE value="update 2" />
-    <option name="LAST_COMMIT_MESSAGE" value="update 2" />
+    <MESSAGE value="register_message 1" />
+    <option name="LAST_COMMIT_MESSAGE" value="register_message 1" />
   </component>
 </project>

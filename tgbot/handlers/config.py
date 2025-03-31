@@ -331,36 +331,36 @@ class RegisterMessage():
 
             elif message.content_type == 'sticker':
                 await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.sticker.file_unique_id)
-                await message.answer(f'🔮 Стикер добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                await message.answer(f'🔮 Стикер добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.sticker.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'animation':
                 await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.animation.file_unique_id)
-                await message.answer(f'🎞 Гиф добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                await message.answer(f'🎞 Гиф добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.animation.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'voice':
                 await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.voice.file_unique_id)
-                await message.answer(f'🎙 Голосовое добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                await message.answer(f'🎙 Голосовое добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.voice.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'document':
                 await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.document.file_unique_id)
-                await message.answer(f'💾 Документ добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                await message.answer(f'💾 Документ добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.document.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'photo':
                 photo = message.photo[-1]
                 await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,photo.file_unique_id)
-                await message.answer(f'🖼 Фото добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                await message.answer(f'🖼 Фото добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{photo.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'video':
                 await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.video.file_unique_id)
-                await message.answer(f'📹 Видео добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                await message.answer(f'📹 Видео добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
                 return
 
             elif message.content_type == 'video_note':
                 await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.video_note.file_unique_id)
-                await message.answer(f'📷 Кружок добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                await message.answer(f'📷 Кружок добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video_note.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
                 return
