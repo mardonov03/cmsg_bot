@@ -34,6 +34,7 @@ async def setup_aiogram(dp: Dispatcher) -> None:
 
 async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
     try:
+        await bot.delete_webhook(drop_pending_updates=True)
         pool = await create_pool()
 
         mainmodel = MainModel(pool, bot)
