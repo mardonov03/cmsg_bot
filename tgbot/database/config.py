@@ -23,7 +23,8 @@ async def init_db(pool):
                 CREATE TABLE IF NOT EXISTS users (
                     userid BIGINT PRIMARY KEY,
                     username TEXT UNIQUE,
-                    name TEXT
+                    name TEXT,
+                    added_time TIMESTAMP NOT NULL DEFAULT NOW()
                 );
             """)
 
@@ -32,6 +33,7 @@ async def init_db(pool):
                     groupid BIGINT PRIMARY KEY,
                     username TEXT UNIQUE,
                     name TEXT,
+                    added_time TIMESTAMP NOT NULL DEFAULT NOW(),
                     creator BIGINT REFERENCES users(userid)
                 );
             """)
@@ -46,7 +48,7 @@ async def init_db(pool):
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS group_states (
                     groupid BIGINT PRIMARY KEY REFERENCES groups(groupid) ON DELETE CASCADE,
-                    bot_status BOOLEAN DEFAULT TRUE -- 1: turn on 0: turn off
+                    bot_status BOOLEAN NOT NULL DEFAULT TRUE -- 1: turn on 0: turn off
                 );
             """)
 
@@ -55,15 +57,35 @@ async def init_db(pool):
                     groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
                     message_id TEXT NOT NULL,
                     message_type TEXT NOT NULL,
-                    PRIMARY KEY (groupid, message_id)
+                    added_time TIMESTAMP NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (groupid, message_id, message_type)
                 );
             """)
 
             await conn.execute("""
+                CREATE TABLE IF NOT EXISTS global_ban_messages (
+                    message_id TEXT NOT NULL,
+                    message_type TEXT NOT NULL,
+                    added_time TIMESTAMP NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (message_id, message_type)
+                );
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS group_settings (
+                    groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
+                    userid BIGINT REFERENCES users(userid) ON DELETE SET NULL, -- км охрги марта настройка кганини сакласе болади
+                    nsfw_prots INTEGER DEFAULT 20,
+                    photo_with_opencv BOOLEAN DEFAULT TRUE,
+                    logs BOOLEAN DEFAULT FALSE,
+                    PRIMARY KEY (groupid)
+                );
+            """)
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS privilege (
                     groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
                     userid BIGINT REFERENCES users(userid) ON DELETE CASCADE,
-                    datanow TIMESTAMP DEFAULT now(),
+                    datanow TIMESTAMP DEFAULT NOW(),
                     per_minutes BIGINT,
                     PRIMARY KEY (groupid, userid)
                 );

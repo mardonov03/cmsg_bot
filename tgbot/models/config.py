@@ -1,5 +1,7 @@
 import logging
 import betterlogging as bl
+import os
+import opennsfw2 as n2
 
 log_level = logging.INFO
 bl.basic_colorized_config(level=log_level)
@@ -19,7 +21,7 @@ class UsersModel(MainModel):
 
             async with self.pool.acquire() as conn:
                 await conn.execute('INSERT INTO users (userid, username, name) VALUES ($1, $2, $3)', userid, username, name)
-
+                await conn.execute('INSERT INTO user_states (userid) VALUES ($1)', userid)
             return {'userid': userid, 'username': username, 'name': name}
 
         except Exception as e:
@@ -39,9 +41,9 @@ class UsersModel(MainModel):
         try:
             async with self.pool.acquire() as conn:
                 results = await conn.fetch('SELECT * FROM groups WHERE creator = $1', userid)
-                if results:
-                    return {'status': 'ok', 'groups': [{"groupid": row["groupid"], "username": row["username"], "name": row['name'], "creator": row['creator']} for row in results]}
-                return {'status': 'no', 'groups': []}
+            if results:
+                return {'status': 'ok', 'groups': [{"groupid": row["groupid"], "username": row["username"], "name": row['name'], "creator": row['creator']} for row in results]}
+            return {'status': 'no', 'groups': []}
         except Exception as e:
             logging.error(f'get_user_groups error: {e}')
             return {'status': 'error', 'groups': []}
@@ -52,7 +54,7 @@ class UsersModel(MainModel):
         try:
             async with self.pool.acquire() as conn:
                 await conn.execute('UPDATE groups SET creator = $1 WHERE groupid =$2',userid, groupid)
-                return True
+            return True
         except Exception as e:
             logging.error(f'"add_creator error": {e}')
 
@@ -60,10 +62,20 @@ class UsersModel(MainModel):
         try:
             async with self.pool.acquire() as conn:
                 await conn.execute('INSERT INTO user_states (userid, last_group_update) VALUES ($1, $2) ON CONFLICT (userid) DO UPDATE SET last_group_update = EXCLUDED.last_group_update', userid, groupid)
-                return True
+            return True
         except Exception as e:
             logging.error(f'"last_group_update error": {e}')
 
+    async def get_user_privilage(self, userid, groupid):
+        try:
+            async with self.pool.acquire() as conn:
+                result = await conn.fetchrow('SELECT * FROM privilege WHERE groupid = $1 AND userid = $2',groupid, userid)
+            if result:
+                return {'status': 'ok', 'datanow': result['datanow'], 'per_secundes': result['per_secundes']}
+            return {'status': 'no', 'datanow': '', 'per_secundes': ''}
+        except Exception as e:
+            logging.error(f'"get_user_privilage error": {e}')
+            return {'status': 'error'}
 
 
 class GroupModel(MainModel):
@@ -75,9 +87,10 @@ class GroupModel(MainModel):
 
             async with self.pool.acquire() as conn:
                 await conn.execute('INSERT INTO groups (groupid, username, name) VALUES ($1, $2, $3)', groupid, username, name)
+                await conn.execute('INSERT INTO group_states (groupid) VALUES ($1)', groupid)
                 return {'status': 'ok','groupid': groupid, 'username': username, 'name': name}
         except Exception as e:
-            logging.error(f'__add_group error: {e}')
+            logging.error(f'add_group error: {e}')
             return {'status': 'no', 'groupid': None, 'username': '', 'name': ''}
 
 
@@ -88,7 +101,7 @@ class GroupModel(MainModel):
                 return {'status': 'ok'}
         except Exception as e:
             logging.error(f'__add_group error: {e}')
-            return {'status': 'no'}
+            return {'status': 'error'}
 
     async def get_group(self, groupid):
         try:
@@ -160,8 +173,77 @@ class MessagesModel(MainModel):
     async def register_ban_message(self, groupid, message_type, message_id):
         try:
             async with self.pool.acquire() as conn:
-                await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id) DO NOTHING', groupid, message_id, message_type)
+                await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, message_id, message_type)
             return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
         except Exception as e:
             logging.error(f'register_ban_message error: {e}')
             return {'status': 'error', 'groupid': '', 'message_id': '', 'message_type': ''}
+
+    async def scan_message_text(self, message_text, groupid):
+        try:
+            async with self.pool.acquire() as conn:
+                pass
+            #     await conn.execute(
+            #         'INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id) DO NOTHING',
+            #         groupid, message_id, message_type)
+            # return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
+        except Exception as e:
+            logging.error(f'scan_message_text error: {e}')
+            return {'status': 'error', 'groupid': '', 'message_id': '', 'message_type': ''}
+
+    async def scan_message_photo(self, message, groupid):
+        photo = message.photo[-1]
+        photo_id = photo.file_unique_id
+
+        is_banned_global = await self.__check_global(photo_id, 'photo')
+
+        try:
+            if is_banned_global['status'] == 'ok' and is_banned_global['is_banned'] is True:
+                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok', 'groupid': groupid}
+
+            async with self.pool.acquire() as conn:
+                result = await conn.fetchval('SELECT 1 FROM ban_messages WHERE groupid = $1 AND message_type =$2 AND message_id = $3', groupid, message.content_type, photo_id)
+
+                if result:
+                    return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid}
+                nsfw_prots_group = await conn.fetchval('SELECT nsfw_prots FROM group_settings WHERE groupid = $1', groupid)
+            os.makedirs("photos", exist_ok=True)
+            file_info = await message.bot.get_file(photo.file_id)
+
+            file_path = file_info.file_path
+
+            local_path = f"photos/temp_{photo.file_unique_id}.jpg"
+            await message.bot.download_file(file_path, local_path)
+
+            nsfw_probability = n2.predict_image(local_path)
+
+            os.remove(local_path)
+            nsfw, prots = f'{nsfw_probability * 100}'.split('.')
+            print(int(nsfw))
+            if int(nsfw) >= 60:
+                async with self.pool.acquire() as conn:
+                    await conn.execute('INSERT INTO global_ban_messages (message_id, message_type) VALUES ($1, $2) ON CONFLICT (message_id, message_type) DO NOTHING', photo_id, 'photo')
+                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok', 'groupid': groupid}
+
+            elif int(nsfw) >= nsfw_prots_group:
+                async with self.pool.acquire() as conn:
+                    await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, photo_id, 'photo')
+                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid}
+            return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no', 'groupid': groupid}
+        except Exception as e:
+            logging.error(f'scan_message_text error: {e}')
+            return {'status': 'error', 'message_status': '', 'is_global': '', 'groupid': ''}
+
+
+    async def __check_global(self, message_id, message_type):
+        try:
+            async with self.pool.acquire() as conn:
+                res = await conn.fetchval('SELECT 1 FROM global_ban_messages WHERE message_id = $1 AND message_type = $2', message_id, message_type)
+            if res:
+                is_banned = True
+            else:
+                is_banned = False
+            return {'status': 'ok', 'is_banned': is_banned}
+        except Exception as e:
+            logging.error(f'"error": {e}')
+            return {'status': 'error', 'is_banned': False}
