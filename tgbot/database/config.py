@@ -72,6 +72,13 @@ async def init_db(pool):
             """)
 
             await conn.execute("""
+                CREATE TABLE IF NOT EXISTS global_white_texts (
+                    text TEXT NOT NULL,
+                    PRIMARY KEY (text)
+                );
+            """)
+
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS group_settings (
                     groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
                     userid BIGINT REFERENCES users(userid) ON DELETE SET NULL, -- км охрги марта настройка кганини сакласе болади
