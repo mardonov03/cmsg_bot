@@ -245,17 +245,23 @@ class CheckMessage():
                 return
 
             messagesmodel: MessagesModel = kwargs['messagesmodel']
+
+            is_logs_on = await groupmodel.is_logs_on(groupid)
+
             if message.content_type == 'text':
                 result = await messagesmodel.scan_message_text(message.text, groupid)
                 if result['status'] == 'ok':
                     if result['is_banned'] == 'ok':
                         await message.bot.delete_message(groupid, message.message_id)
-                        await message.answer('banned word: ' + str(result['banword']))
+                        if is_logs_on['logs'] is True:
+                            await message.answer('Banned word: ' + str(result['banword']))
                 return
             if message.content_type == 'photo':
                 is_banned = await messagesmodel.scan_message_photo(message, message.chat.id)
                 if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)
+                    if is_logs_on['logs'] is True:
+                        await message.answer(f'banned word: <b>{is_banned['message_id']}</b>', parse_mode='HTML')
                 return
         except Exception as e:
             logging.error(f'"check_message error": {e}')
