@@ -217,10 +217,16 @@ class CheckMessage():
             groupmodel: GroupModel = kwargs['groupmodel']
             usersmodel: UsersModel = kwargs['usersmodel']
 
+            is_bot_admin = await groupmodel.is_bot_admin(groupid)
+
+            if not is_bot_admin:
+                return
+
             status = await groupmodel.get_bot_status(groupid)
 
             if not status['status'] == 'ok' or not status['bot_status']:
                 return
+
             user_privilage = await usersmodel.get_user_privilage(userid, groupid)
 
             if user_privilage['status'] == 'ok':
@@ -241,12 +247,16 @@ class CheckMessage():
             messagesmodel: MessagesModel = kwargs['messagesmodel']
             if message.content_type == 'text':
                 result = await messagesmodel.scan_message_text(message.text, groupid)
+                if result['status'] == 'ok':
+                    if result['is_banned'] == 'ok':
+                        await message.bot.delete_message(groupid, message.message_id)
+                        await message.answer('banned word: ' + str(result['banword']))
                 return
             if message.content_type == 'photo':
                 is_banned = await messagesmodel.scan_message_photo(message, message.chat.id)
                 if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
-                    await message.bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-                    return
+                    await message.bot.delete_message(message.chat.id, message.message_id)
+                return
         except Exception as e:
             logging.error(f'"check_message error": {e}')
 

@@ -2,6 +2,9 @@ import logging
 import betterlogging as bl
 import os
 import opennsfw2 as n2
+import re
+import itertools
+
 
 log_level = logging.INFO
 bl.basic_colorized_config(level=log_level)
@@ -160,6 +163,17 @@ class GroupModel(MainModel):
             return {'status': 'error', 'missed': []}
 
 class MessagesModel(MainModel):
+    lat_to_kir = {'q': ['к', 'қ'], 'w': ['щ', 'ш'], 'e': ['э', 'е'], 'r': ['р'], 't': ['т'],
+        'y': ['й', 'е'], 'u': ['у'], 'i': ['и'], 'o': ['о', 'ө'], 'p': ['п'],'a': ['а'],
+        's': ['с'], 'd': ['д'], 'f': ['ф'], 'g': ['г', 'ғ'], 'h': ['х'], 'j': ['ж'], 'k': ['к'],'l': ['л'],'z': ['з'],
+        'x': ['х'],'c': ['ц'],'v': ['в'],'b': ['б'],'n': ['н'],'m': ['м'],'yo': ['е','ё'],'ya': ['я'],'yu': ['ю']
+    }
+
+    kir_to_lat = { 'а': ['a'],'б': ['b'],'в': ['v'],'г': ['g'],'ғ': ['g'],'д': ['d'],'е': ['e', 'yo', 'y'],'ё': ['yo'],'ж': ['j'],
+        'з': ['z'],'и': ['i'],'й': ['y'],'к': ['q', 'k'],'қ': ['q'],'л': ['l'],'м': ['m'],'н': ['n'],'ң': ['n'],'о': ['o'],'ө': ['o'],
+        'п': ['p'],'р': ['r'],'с': ['s'],'т': ['t'],'у': ['u'],'ұ': ['u'],'ү': ['u'],'ф': ['f'],'х': ['h', 'x'],'ц': ['c'],
+        'ч': ['c','ch'],'ш': ['w'],'щ': ['w'],'ъ': [],'ы': ['i'],'ь': [],'э': ['e'],'ю': ['yu'],'я': ['ya'],
+    }
 
     async def get_last_group(self, userid):
         try:
@@ -181,15 +195,42 @@ class MessagesModel(MainModel):
 
     async def scan_message_text(self, message_text, groupid):
         try:
+            message_filter = re.sub(r'[^a-zа-яёңұүөқғ\s]', '', message_text.lower())
+            message_filter = re.sub(r'(.)\1+', r'\1', message_filter)
+            words = message_filter.split()
+            all_combinations = []
+
+            for word in words:
+                variants_per_letter = []
+                for letter in word:
+                    if letter in self.kir_to_lat:
+                        variants_per_letter.append(self.kir_to_lat[letter])
+                    elif letter in 'abcdefghijklmnopqrstuvwxyz':
+                        variants_per_letter.append([letter])
+                    else:
+                        variants_per_letter.append([''])
+
+                word_variants = [''.join(comb) for comb in itertools.product(*variants_per_letter)]
+                all_combinations.extend(word_variants)
+
             async with self.pool.acquire() as conn:
-                pass
-            #     await conn.execute(
-            #         'INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id) DO NOTHING',
-            #         groupid, message_id, message_type)
-            # return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
+                global_ban_rows = await conn.fetch('SELECT message_id FROM global_ban_messages WHERE message_type = $1', "text")
+                group_ban_rows = await conn.fetch('SELECT message_id FROM ban_messages WHERE message_type = $1 AND groupid = $2', "text", groupid)
+
+            global_ban_words = {row['message_id'] for row in global_ban_rows}
+            group_ban_words = {row['message_id'] for row in group_ban_rows}
+
+            for variant in all_combinations:
+                if variant in global_ban_words:
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'global_or_group': 'global', 'banword': variant}
+                if variant in group_ban_words:
+                    return {'status': 'ok','groupid': groupid,'is_banned': 'ok','global_or_group': 'group','banword': variant}
+
+            return {'status': 'ok','groupid': groupid,'is_banned': 'no','global_or_group': None,'banword': None}
+
         except Exception as e:
-            logging.error(f'scan_message_text error: {e}')
-            return {'status': 'error', 'groupid': '', 'message_id': '', 'message_type': ''}
+            logging.error(f'"scan_message_text error": {e}')
+            return {'status': 'error', 'groupid': groupid, 'is_banned': '', 'global_or_group': '', 'banword': ''}
 
     async def scan_message_photo(self, message, groupid):
         photo = message.photo[-1]
