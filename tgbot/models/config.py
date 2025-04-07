@@ -131,6 +131,16 @@ class GroupModel(MainModel):
             logging.error(f'"turn-get_bot_status error": {e}')
             return {'status': 'error', 'bot_status': ''}
 
+    async def is_logs_on(self, groupid: int):
+        try:
+            async with self.pool.acquire() as conn:
+                result = await conn.fetchval('SELECT logs FROM group_settings WHERE groupid = $1', groupid)
+                return {'status': 'ok', 'logs': result}
+        except Exception as e:
+            logging.error(f'"turn-is_logs_on error": {e}')
+            return {'status': 'error', 'logs': ''}
+
+
     async def is_bot_admin(self, groupid) -> bool:
         try:
             result = await self.bot.get_chat_member(groupid, self.bot.id)
@@ -163,16 +173,16 @@ class GroupModel(MainModel):
             return {'status': 'error', 'missed': []}
 
 class MessagesModel(MainModel):
-    lat_to_kir = {'q': ['к', 'қ'], 'w': ['щ', 'ш'], 'e': ['э', 'е'], 'r': ['р'], 't': ['т'],
+    lat_to_kir = {'q': ['қ', "к'"], 'w': ['щ', 'ш'], 'e': ['э', 'е'], 'r': ['р'], 't': ['т'],
         'y': ['й', 'е'], 'u': ['у'], 'i': ['и'], 'o': ['о', 'ө'], 'p': ['п'],'a': ['а'],
         's': ['с'], 'd': ['д'], 'f': ['ф'], 'g': ['г', 'ғ'], 'h': ['х'], 'j': ['ж'], 'k': ['к'],'l': ['л'],'z': ['з'],
         'x': ['х'],'c': ['ц'],'v': ['в'],'b': ['б'],'n': ['н'],'m': ['м'],'yo': ['е','ё'],'ya': ['я'],'yu': ['ю']
     }
 
     kir_to_lat = { 'а': ['a'],'б': ['b'],'в': ['v'],'г': ['g'],'ғ': ['g'],'д': ['d'],'е': ['e', 'yo', 'y'],'ё': ['yo'],'ж': ['j'],
-        'з': ['z'],'и': ['i'],'й': ['y'],'к': ['q', 'k'],'қ': ['q'],'л': ['l'],'м': ['m'],'н': ['n'],'ң': ['n'],'о': ['o'],'ө': ['o'],
+        'з': ['z'],'и': ['i'],'й': ['y'],'к': ['k'],'қ': ['q'],'л': ['l'],'м': ['m'],'н': ['n'],'ң': ['n'],'о': ['o'],'ө': ['o'],
         'п': ['p'],'р': ['r'],'с': ['s'],'т': ['t'],'у': ['u'],'ұ': ['u'],'ү': ['u'],'ф': ['f'],'х': ['h', 'x'],'ц': ['c'],
-        'ч': ['c','ch'],'ш': ['w'],'щ': ['w'],'ъ': [],'ы': ['i'],'ь': [],'э': ['e'],'ю': ['yu'],'я': ['ya'],
+        'ч': ['c','ch'],'ш': ['w'],'щ': ['w'],'ъ': [],'ы': ['i'],'ь': [],'э': ['e'],'ю': ['yu'],'я': ['ya'], "к'": ['q']
     }
 
     async def get_last_group(self, userid):
@@ -184,34 +194,42 @@ class MessagesModel(MainModel):
             logging.error(f'get_last_group error: {e}')
             return {'status': 'error', 'last_group_update': ''}
 
-    async def register_ban_message(self, groupid, message_type, message_id):
-        try:
-            async with self.pool.acquire() as conn:
-                await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, message_id, message_type)
-            return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
-        except Exception as e:
-            logging.error(f'register_ban_message error: {e}')
-            return {'status': 'error', 'groupid': '', 'message_id': '', 'message_type': ''}
-
     async def scan_message_text(self, message_text, groupid):
         try:
-            message_filter = re.sub(r'[^a-zа-яёңұүөқғ\s]', '', message_text.lower())
+            message_filter = re.sub(r"[^a-zа-яёңұүөқғ\s']", '', message_text.lower())
             message_filter = re.sub(r'(.)\1+', r'\1', message_filter)
             words = message_filter.split()
             all_combinations = []
 
             for word in words:
+                parsed_letters = []
+                skip = False
+                for i in range(len(word)):
+                    if skip:
+                        skip = False
+                        continue
+                    if i + 1 < len(word) and word[i + 1] == "'" and word[i] == 'к':
+                        parsed_letters.append(word[i] + "'")
+                        skip = True
+                    else:
+                        parsed_letters.append(word[i])
+
                 variants_per_letter = []
-                for letter in word:
+                for letter in parsed_letters:
                     if letter in self.kir_to_lat:
-                        variants_per_letter.append(self.kir_to_lat[letter])
+                        variants = self.kir_to_lat[letter] + [letter]
+                        variants_per_letter.append(variants)
                     elif letter in 'abcdefghijklmnopqrstuvwxyz':
-                        variants_per_letter.append([letter])
+                        lat_to_kir = [k for k, v in self.kir_to_lat.items() if letter in v]
+                        variants = [letter] + lat_to_kir
+                        variants_per_letter.append(variants)
                     else:
                         variants_per_letter.append([''])
 
                 word_variants = [''.join(comb) for comb in itertools.product(*variants_per_letter)]
                 all_combinations.extend(word_variants)
+
+            print(all_combinations)
 
             async with self.pool.acquire() as conn:
                 global_ban_rows = await conn.fetch('SELECT message_id FROM global_ban_messages WHERE message_type = $1', "text")
@@ -222,15 +240,15 @@ class MessagesModel(MainModel):
 
             for variant in all_combinations:
                 if variant in global_ban_words:
-                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'global_or_group': 'global', 'banword': variant}
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': variant}
                 if variant in group_ban_words:
-                    return {'status': 'ok','groupid': groupid,'is_banned': 'ok','global_or_group': 'group','banword': variant}
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no', 'banword': variant}
 
-            return {'status': 'ok','groupid': groupid,'is_banned': 'no','global_or_group': None,'banword': None}
+            return {'status': 'ok', 'groupid': groupid, 'is_banned': 'no', 'is_global': None, 'banword': None}
 
         except Exception as e:
             logging.error(f'"scan_message_text error": {e}')
-            return {'status': 'error', 'groupid': groupid, 'is_banned': '', 'global_or_group': '', 'banword': ''}
+            return {'status': 'error', 'groupid': groupid, 'is_banned': '', 'is_global': '', 'banword': ''}
 
     async def scan_message_photo(self, message, groupid):
         photo = message.photo[-1]
@@ -240,14 +258,15 @@ class MessagesModel(MainModel):
 
         try:
             if is_banned_global['status'] == 'ok' and is_banned_global['is_banned'] is True:
-                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok', 'groupid': groupid}
+                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok', 'groupid': groupid, 'message_id': photo.file_unique_id}
 
             async with self.pool.acquire() as conn:
                 result = await conn.fetchval('SELECT 1 FROM ban_messages WHERE groupid = $1 AND message_type =$2 AND message_id = $3', groupid, message.content_type, photo_id)
 
                 if result:
-                    return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid}
+                    return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
                 nsfw_prots_group = await conn.fetchval('SELECT nsfw_prots FROM group_settings WHERE groupid = $1', groupid)
+
             os.makedirs("photos", exist_ok=True)
             file_info = await message.bot.get_file(photo.file_id)
 
@@ -264,16 +283,16 @@ class MessagesModel(MainModel):
             if int(nsfw) >= 60:
                 async with self.pool.acquire() as conn:
                     await conn.execute('INSERT INTO global_ban_messages (message_id, message_type) VALUES ($1, $2) ON CONFLICT (message_id, message_type) DO NOTHING', photo_id, 'photo')
-                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok', 'groupid': groupid}
+                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok', 'groupid': groupid, 'message_id': photo.file_unique_id}
 
             elif int(nsfw) >= nsfw_prots_group:
                 async with self.pool.acquire() as conn:
                     await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, photo_id, 'photo')
-                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid}
-            return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no', 'groupid': groupid}
+                return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
+            return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
         except Exception as e:
             logging.error(f'scan_message_text error: {e}')
-            return {'status': 'error', 'message_status': '', 'is_global': '', 'groupid': ''}
+            return {'status': 'error', 'message_status': '', 'is_global': '', 'groupid': '', 'message_id': ''}
 
 
     async def __check_global(self, message_id, message_type):
