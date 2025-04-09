@@ -58,8 +58,9 @@ async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
                 await message.answer('У вас пока нет груп')
                 return
 
-            await message.answer('Выберите группу', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
+            await message.answer('Выберите группу для добавления сообщений', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
             await state.update_data(g_list=[[i['name'], i['groupid']] for i in user_groups['groups']])
+            await state.update_data(action=message.text)
             await state.set_state(UserState.select_group_state)
         except Exception as e:
             logging.error(f'"handle_start error (private": {e}')
@@ -81,7 +82,11 @@ async def select_group(message:Message, state:FSMContext, **kwargs):
         try:
             usersmodel: UsersModel = kwargs['usersmodel']
 
-            restult = await usersmodel.last_group_update(groupid, message.from_user.id)
+            if data['action'] and data['action']=='/remove':
+                action = 'remove'
+            else:
+                action = 'add'
+            restult = await usersmodel.last_group_update(groupid, message.from_user.id, action)
             if restult:
                 await message.answer('Группа выбрана удачно', reply_markup=cancel())
             else:
@@ -93,6 +98,42 @@ async def select_group(message:Message, state:FSMContext, **kwargs):
 
 async def handle_stop(message: Message, **kwargs) -> None:
     if message.chat.type in ['group', 'supergroup']:
+        try:
+            groupid = message.chat.id
+
+            if not message.text.startswith('/stop@cleanermsgbot'):
+                return
+
+            groupmodel: GroupModel = kwargs['groupmodel']
+
+            is_bot_admin = await groupmodel.is_bot_admin(groupid)
+
+            if not is_bot_admin:
+                await message.answer("🛠 Мне нужны права администратора на:\n\n✔️Удаление сообщений\n✔️Блокировка Пользователей")
+                return
+
+            permissions = await groupmodel.get_bot_privileges(groupid)
+
+            if permissions['status'] == 'no':
+                await message.answer(f"🛠 Мне не хватает прав:\n\n" + "\n".join(permissions['missed']))
+                return
+
+            result = await groupmodel.get_group(groupid)
+
+            if not result:
+                await groupmodel.add_group(groupid)
+
+            is_user_creator = await groupmodel.is_user_creator(groupid, message.from_user.id)
+
+            if is_user_creator['result'] == 'creator':
+                status = await groupmodel.turn_on_off_bot(groupid, False)
+
+                await message.answer('🟢 Бот включен!' if status is True else '🔴 Бот выключен!')
+        except Exception as e:
+            logging.error(f'"handle_stop error:" {e}')
+
+async def handle_settings(message: Message, **kwargs) -> None:
+    if message.chat.type == 'private':
         try:
             groupid = message.chat.id
 
@@ -254,14 +295,14 @@ class CheckMessage():
                     if result['is_banned'] == 'ok':
                         await message.bot.delete_message(groupid, message.message_id)
                         if is_logs_on['logs'] is True:
-                            await message.answer('Banned word: ' + str(result['banword']))
+                            await message.answer(f'Banned word: {str(result["banword"])}', parse_mode='HTML')
                 return
             if message.content_type == 'photo':
                 is_banned = await messagesmodel.scan_message_photo(message, message.chat.id)
                 if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:
-                        await message.answer(f'banned word: <b>{is_banned['message_id']}</b>', parse_mode='HTML')
+                        await message.answer(f'Banned photo id: <b>{is_banned['message_id']}</b>', parse_mode='HTML')
                 return
         except Exception as e:
             logging.error(f'"check_message error": {e}')
@@ -269,99 +310,168 @@ class CheckMessage():
 
 class RegisterMessage():
     @staticmethod
-    async def register_message(message: Message, state:FSMContext, bot, **kwargs) -> None:
+    async def register_message_add_delete(message: Message, state:FSMContext, bot, **kwargs) -> None:
         userid = message.from_user.id
-
-        if message.chat.type != 'private':
-            return
-
-        usersmodel: UsersModel = kwargs['usersmodel']
-
-        groupmodel: GroupModel = kwargs['groupmodel']
-
-        messagesmodel: MessagesModel = kwargs['messagesmodel']
-
-        last_group = await messagesmodel.get_last_group(userid)
-
-        if not last_group['last_group_update']:
-            user_groups = await usersmodel.get_user_groups(userid)
-
-            if not user_groups or not user_groups['status'] == 'ok':
-                await message.answer('У вас пока нет груп')
+        try:
+            if message.chat.type != 'private':
                 return
 
-            await message.answer('старих данних не нашли пожалюста выберите группу', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
-            await state.update_data(g_list=[[i['name'], i['groupid']] for i in user_groups['groups']])
-            await state.set_state(UserState.select_group_state)
-            return
+            usersmodel: UsersModel = kwargs['usersmodel']
 
-        is_user_creator = await groupmodel.is_user_creator(last_group['last_group_update'], message.from_user.id)
+            groupmodel: GroupModel = kwargs['groupmodel']
 
-        if is_user_creator['result'] == 'creator':
-            group = await groupmodel.get_group(last_group['last_group_update'])
-            invite_link = await bot.export_chat_invite_link(last_group['last_group_update'])
+            messagesmodel: MessagesModel = kwargs['messagesmodel']
 
-            if message.content_type == 'text':
-                result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.text)
-                if result['status'] == 'ok':
-                    await message.answer(f'📄 Слово "<b>{message.text}</b>" добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+            last_group = await messagesmodel.get_last_group(userid)
+
+            if not last_group['last_group_update']:
+                user_groups = await usersmodel.get_user_groups(userid)
+
+                if not user_groups or not user_groups['status'] == 'ok':
+                    await message.answer('У вас пока нет груп')
+                    return
+
+                await message.answer('Старих данних не нашли пожалюста выберите группу', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
+                await state.update_data(g_list=[[i['name'], i['groupid']] for i in user_groups['groups']])
+                await state.set_state(UserState.select_group_state)
+                return
+
+            is_user_creator = await groupmodel.is_user_creator(last_group['last_group_update'], message.from_user.id)
+
+            if is_user_creator['result'] == 'creator':
+                group = await groupmodel.get_group(last_group['last_group_update'])
+                invite_link = await bot.export_chat_invite_link(last_group['last_group_update'])
+                action = last_group['action']
+                if action == 'remove':
+                    if message.content_type == 'text':
+                        result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.text)
+                        if result['status'] == 'ok':
+                            await message.answer(f'📄 Слово "<b>{message.text}</b>" удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить слово из запретов.')
+                        return
+
+                    elif message.content_type == 'sticker':
+                        result= await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.sticker.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🔮 Стикер удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.sticker.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить стикер из запретов.')
+                        return
+
+                    elif message.content_type == 'animation':
+                        result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.animation.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🎞 Гиф удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.animation.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить гиф из запретов.')
+                        return
+
+                    elif message.content_type == 'voice':
+                        result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.voice.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🎙 Голосовое удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.voice.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить голосовое из запретов.')
+                        return
+
+                    elif message.content_type == 'document':
+                        result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.document.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'💾 Документ удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.document.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить документ из запретов.')
+                        return
+
+                    elif message.content_type == 'photo':
+                        photo = message.photo[-1]
+                        result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,photo.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🖼 Фото удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{photo.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить фото из запретов.')
+                        return
+
+                    elif message.content_type == 'video':
+                        result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.video.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'📹 Видео удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить видео из запретов.')
+                        return
+
+                    elif message.content_type == 'video_note':
+                        result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.video_note.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'📷 Кружок удалён из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video_note.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось удалить кружок из запретов.')
+                        return
+
                 else:
-                    await message.answer('❌ Не удалось добавить слово в запреты.')
-                return
+                    if message.content_type == 'text':
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.text)
+                        if result['status'] == 'ok':
+                            await message.answer(f'📄 Слово "<b>{message.text}</b>" добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.', parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить слово в запреты.')
+                        return
 
-            elif message.content_type == 'sticker':
-                result= await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.sticker.file_unique_id)
-                if result['status'] == 'ok':
-                    await message.answer(f'🔮 Стикер добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.sticker.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    await message.answer('❌ Не удалось добавить стикер в запреты.')
-                return
+                    elif message.content_type == 'sticker':
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.sticker.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🔮 Стикер добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.sticker.file_unique_id}</b>', parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить стикер в запреты.')
+                        return
 
-            elif message.content_type == 'animation':
-                result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.animation.file_unique_id)
-                if result['status'] == 'ok':
-                    await message.answer(f'🎞 Гиф добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.animation.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    await message.answer('❌ Не удалось добавить гиф в запреты.')
-                return
+                    elif message.content_type == 'animation':
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.animation.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🎞 Гиф добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.animation.file_unique_id}</b>', parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить гиф в запреты.')
+                        return
 
-            elif message.content_type == 'voice':
-                result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.voice.file_unique_id)
-                if result['status'] == 'ok':
-                    await message.answer(f'🎙 Голосовое добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.voice.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    await message.answer('❌ Не удалось добавить голосовое в запреты.')
-                return
+                    elif message.content_type == 'voice':
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.voice.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🎙 Голосовое добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.voice.file_unique_id}</b>', parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить голосовое в запреты.')
+                        return
 
-            elif message.content_type == 'document':
-                result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.document.file_unique_id)
-                if result['status'] == 'ok':
-                    await message.answer(f'💾 Документ добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.document.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    await message.answer('❌ Не удалось добавить документ в запреты.')
-                return
+                    elif message.content_type == 'document':
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.document.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'💾 Документ добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.document.file_unique_id}</b>', parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить документ в запреты.')
+                        return
 
-            elif message.content_type == 'photo':
-                photo = message.photo[-1]
-                result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,photo.file_unique_id)
-                if result['status'] == 'ok':
-                    await message.answer(f'🖼 Фото добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{photo.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    await message.answer('❌ Не удалось добавить фото в запреты.')
-                return
+                    elif message.content_type == 'photo':
+                        photo = message.photo[-1]
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, photo.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'🖼 Фото добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{photo.file_unique_id}</b>', parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить фото в запреты.')
+                        return
 
-            elif message.content_type == 'video':
-                result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.video.file_unique_id)
-                if result['status'] == 'ok':
-                    await message.answer(f'📹 Видео добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    await message.answer('❌ Не удалось добавить видео в запреты.')
-                return
+                    elif message.content_type == 'video':
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.video.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'📹 Видео добавлено в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video.file_unique_id}</b>', parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить видео в запреты.')
+                        return
 
-            elif message.content_type == 'video_note':
-                result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type,message.video_note.file_unique_id)
-                if result['status'] == 'ok':
-                    await message.answer(f'📷 Кружок добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video_note.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
-                else:
-                    await message.answer('❌ Не удалось добавить кружок в запреты.')
-                return
+                    elif message.content_type == 'video_note':
+                        result = await messagesmodel.register_ban_message(last_group['last_group_update'], message.content_type, message.video_note.file_unique_id)
+                        if result['status'] == 'ok':
+                            await message.answer(f'📷 Кружок добавлен в запреты для <a href="{invite_link}"><b>{group["name"]}</b></a>.\n\nID: <b>{message.video_note.file_unique_id}</b>',parse_mode='HTML', disable_web_page_preview=True)
+                        else:
+                            await message.answer('❌ Не удалось добавить кружок в запреты.')
+                        return
+        except Exception as e:
+            logging.error(f'"register_message_add_delete error": {e}')
