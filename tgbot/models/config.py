@@ -63,7 +63,7 @@ class UsersModel(MainModel):
     async def last_group_update(self, groupid, userid, action):
         try:
             async with self.pool.acquire() as conn:
-                await conn.execute('INSERT INTO user_states (userid, last_group_update, action) VALUES ($1, $2, $3) ON CONFLICT (userid) DO UPDATE SET last_group_update = EXCLUDED.last_group_update', userid, groupid, action)
+                await conn.execute("INSERT INTO user_states (userid, last_group_update, action) VALUES ($1, $2, $3) ON CONFLICT (userid) DO UPDATE SET last_group_update = EXCLUDED.last_group_update, action = EXCLUDED.action",userid, groupid, action)
             return True
         except Exception as e:
             logging.error(f'"last_group_update error": {e}')
@@ -326,7 +326,7 @@ class MessagesModel(MainModel):
     async def delete_ban_message(self, groupid, message_type, message_id):
         try:
             async with self.pool.acquire() as conn:
-                await conn.execute('DELETE FROM ban_messages WHERE groupi = $1 AND message_id =$2 AND message_type=$3', groupid, message_id, message_type)
+                await conn.execute('DELETE FROM ban_messages WHERE groupid = $1 AND message_id =$2 AND message_type=$3', groupid, message_id, message_type)
             return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
         except Exception as e:
             logging.error(f'delete_ban_message error: {e}')
