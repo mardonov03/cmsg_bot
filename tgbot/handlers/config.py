@@ -65,6 +65,27 @@ async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
         except Exception as e:
             logging.error(f'"handle_start error (private": {e}')
 
+async def select_group_1(message:Message, state: FSMContext, **kwargs):
+    if message.chat.type == 'private':
+        try:
+            usersmodel: UsersModel = kwargs['usersmodel']
+
+            userid = message.from_user.id
+            user_data = await usersmodel.get_user(userid)
+
+            user_groups = await usersmodel.get_user_groups(userid)
+
+            if not user_groups or not user_groups['status'] == 'ok':
+                await message.answer('У вас пока нет груп')
+                return
+
+            await message.answer('Выберите группу для добавления сообщений', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
+            await state.update_data(g_list=[[i['name'], i['groupid']] for i in user_groups['groups']])
+            await state.update_data(action=message.text)
+            await state.set_state(UserState.select_group_state)
+        except Exception as e:
+            logging.error(f'"select_group_1 error": {e}')
+
 async def select_group(message:Message, state:FSMContext, **kwargs):
     if message.text == 'отмена':
         await state.clear()
@@ -333,6 +354,7 @@ class RegisterMessage():
 
                 await message.answer('Старих данних не нашли пожалюста выберите группу', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
                 await state.update_data(g_list=[[i['name'], i['groupid']] for i in user_groups['groups']])
+                await state.update_data(action=message.text)
                 await state.set_state(UserState.select_group_state)
                 return
 
@@ -475,3 +497,8 @@ class RegisterMessage():
                         return
         except Exception as e:
             logging.error(f'"register_message_add_delete error": {e}')
+
+
+    @staticmethod
+    async def get_message_list(message: Message, state:FSMContext, bot, **kwargs) -> None:
+        pass
