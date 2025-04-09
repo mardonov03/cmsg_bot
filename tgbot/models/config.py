@@ -51,7 +51,6 @@ class UsersModel(MainModel):
             logging.error(f'get_user_groups error: {e}')
             return {'status': 'error', 'groups': []}
 
-
     async def add_creator(self, groupid, userid):
         user = await self.get_user(userid)
         try:
@@ -61,10 +60,10 @@ class UsersModel(MainModel):
         except Exception as e:
             logging.error(f'"add_creator error": {e}')
 
-    async def last_group_update(self, groupid, userid):
+    async def last_group_update(self, groupid, userid, action):
         try:
             async with self.pool.acquire() as conn:
-                await conn.execute('INSERT INTO user_states (userid, last_group_update) VALUES ($1, $2) ON CONFLICT (userid) DO UPDATE SET last_group_update = EXCLUDED.last_group_update', userid, groupid)
+                await conn.execute('INSERT INTO user_states (userid, last_group_update, action) VALUES ($1, $2, $3) ON CONFLICT (userid) DO UPDATE SET last_group_update = EXCLUDED.last_group_update', userid, groupid, action)
             return True
         except Exception as e:
             logging.error(f'"last_group_update error": {e}')
@@ -188,14 +187,19 @@ class MessagesModel(MainModel):
     async def get_last_group(self, userid):
         try:
             async with self.pool.acquire() as conn:
-                last_group = await conn.fetchval('SELECT last_group_update from user_states WHERE userid = $1', userid)
-                return {'status': 'ok', 'last_group_update': last_group}
+                last_group = await conn.fetchrow('SELECT last_group_update, action FROM user_states WHERE userid = $1', userid)
+                return {'status': 'ok', 'last_group_update': last_group['last_group_update'], 'action': last_group['action']}
         except Exception as e:
             logging.error(f'get_last_group error: {e}')
-            return {'status': 'error', 'last_group_update': ''}
+            return {'status': 'error', 'last_group_update': '', 'action': ''}
 
     async def scan_message_text(self, message_text, groupid):
         try:
+            async with self.pool.acquire() as conn:
+                global_white_rows = await conn.fetch('SELECT message_id FROM global_white_texts')
+            if message_text in global_white_rows:
+                return
+
             message_filter = re.sub(r"[^a-zа-яёңұүөқғ\s']", '', message_text.lower())
             message_filter = re.sub(r'(.)\1+', r'\1', message_filter)
             words = message_filter.split()
@@ -238,14 +242,16 @@ class MessagesModel(MainModel):
             global_ban_words = {row['message_id'] for row in global_ban_rows}
             group_ban_words = {row['message_id'] for row in group_ban_rows}
 
-            for variant in all_combinations:
-                if variant in global_ban_words:
-                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': variant}
-                if variant in group_ban_words:
-                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no', 'banword': variant}
+            if len(message_text) >= 7 and ' ' not in message_text:
+                for banword in global_ban_words:
+                    if banword in message_text:
+                        return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok','banword': banword}
+
+                for banword in group_ban_words:
+                    if banword in message_text:
+                        return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no','banword': banword}
 
             return {'status': 'ok', 'groupid': groupid, 'is_banned': 'no', 'is_global': None, 'banword': None}
-
         except Exception as e:
             logging.error(f'"scan_message_text error": {e}')
             return {'status': 'error', 'groupid': groupid, 'is_banned': '', 'is_global': '', 'banword': ''}
@@ -307,3 +313,21 @@ class MessagesModel(MainModel):
         except Exception as e:
             logging.error(f'"error": {e}')
             return {'status': 'error', 'is_banned': False}
+
+    async def register_ban_message(self, groupid, message_type, message_id):
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, message_id, message_type)
+            return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
+        except Exception as e:
+            logging.error(f'register_ban_message error: {e}')
+            return {'status': 'error', 'groupid': '', 'message_id': '', 'message_type': ''}
+
+    async def delete_ban_message(self, groupid, message_type, message_id):
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute('DELETE FROM ban_messages WHERE groupi = $1 AND message_id =$2 AND message_type=$3', groupid, message_id, message_type)
+            return {'status': 'ok', 'groupid': groupid, 'message_id': message_id, 'message_type': message_type}
+        except Exception as e:
+            logging.error(f'delete_ban_message error: {e}')
+            return {'status': 'error', 'groupid': '', 'message_id': '', 'message_type': ''}

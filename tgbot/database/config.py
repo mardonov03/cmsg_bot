@@ -41,7 +41,8 @@ async def init_db(pool):
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS user_states (
                     userid BIGINT PRIMARY KEY REFERENCES users(userid) ON DELETE CASCADE,
-                    last_group_update BIGINT REFERENCES groups(groupid) ON DELETE SET NULL
+                    last_group_update BIGINT REFERENCES groups(groupid) ON DELETE SET NULL,
+                    action TEXT DEFAULT "add"
                 );
             """)
 
@@ -73,7 +74,7 @@ async def init_db(pool):
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS global_white_texts (
-                    text TEXT NOT NULL,
+                    message_id TEXT NOT NULL,
                     PRIMARY KEY (text)
                 );
             """)

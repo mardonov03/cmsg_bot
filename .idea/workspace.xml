@@ -4,8 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="delete_message_text 1">
+    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="delete_message_text 1.1 (q -&gt; к')">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tgbot/database/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/database/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tgbot/handlers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/handlers/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/models/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/models/config.py" afterDir="false" />
     </list>
@@ -251,7 +253,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744014971214</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="delete_message_text 1.1 (q -&gt; к')">
+      <option name="closed" value="true" />
+      <created>1744022955501</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1744022955501</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -265,6 +275,7 @@
     <MESSAGE value="register_message (full with logs)" />
     <MESSAGE value="delete_message photo 1" />
     <MESSAGE value="delete_message_text 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="delete_message_text 1" />
+    <MESSAGE value="delete_message_text 1.1 (q -&gt; к')" />
+    <option name="LAST_COMMIT_MESSAGE" value="delete_message_text 1.1 (q -&gt; к')" />
   </component>
 </project>
