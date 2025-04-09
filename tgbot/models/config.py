@@ -113,6 +113,15 @@ class GroupModel(MainModel):
         except Exception as e:
             logging.error(f'"get_user error: {e}')
 
+    async def get_ban_words(self, groupid, message_type):
+        try:
+            async with self.pool.acquire() as conn:
+                result = await conn.fetch('SELECT message_id FROM ban_messages WHERE groupid = $1 AND message_type = $2', groupid, message_type)
+            return result
+        except Exception as e:
+            logging.error(f'"get_ban_words error": {e}')
+
+
     async def turn_on_off_bot(self, groupid: int, newstatus: bool):
         try:
             async with self.pool.acquire() as conn:
@@ -170,6 +179,36 @@ class GroupModel(MainModel):
         except Exception as e:
             logging.error(f'"get_bot_privileges error": {e}')
             return {'status': 'error', 'missed': []}
+
+    async def get_group_settings(self, groupid: int):
+        try:
+            async with self.pool.acquire() as conn:
+                result = await conn.fetchrow('SELECT userid, nsfw_prots, photo_with_opencv, logs FROM group_settings WHERE groupid = $1', groupid)
+                return {'status': 'ok', 'userid': result['userid'], 'nsfw_prots': result['nsfw_prots'],'photo_with_opencv': result['photo_with_opencv'], 'logs': result['logs']}
+        except Exception as e:
+            logging.error(f'"get_group_settings error": {e}')
+            return {'status': 'error'}
+
+    async def toggle_setting(self, groupid: int, setting: str):
+        try:
+            async with self.pool.acquire() as conn:
+                if setting == "logs":
+                    current_value = await conn.fetchval('SELECT logs FROM group_settings WHERE groupid = $1', groupid)
+                    new_value = not current_value  # Переключение значения
+                    await conn.execute('UPDATE group_settings SET logs = $1 WHERE groupid = $2', new_value, groupid)
+                elif setting == "photo_with_opencv":
+                    current_value = await conn.fetchval('SELECT photo_with_opencv FROM group_settings WHERE groupid = $1', groupid)
+                    new_value = not current_value
+                    await conn.execute('UPDATE group_settings SET photo_with_opencv = $1 WHERE groupid = $2', new_value, groupid)
+                elif setting == "nsfw_prots":
+                    # Для числового параметра, можно увеличить или уменьшить (например, на 10)
+                    current_value = await conn.fetchval('SELECT nsfw_prots FROM group_settings WHERE groupid = $1', groupid)
+                    new_value = (current_value + 10) % 100  # Пример, можно изменить логику
+                    await conn.execute('UPDATE group_settings SET nsfw_prots = $1 WHERE groupid = $2', new_value, groupid)
+                return {'status': 'ok'}
+        except Exception as e:
+            logging.error(f'"toggle_setting error": {e}')
+            return {'status': 'error'}
 
 class MessagesModel(MainModel):
     lat_to_kir = {'q': ['қ', "к'"], 'w': ['щ', 'ш'], 'e': ['э', 'е'], 'r': ['р'], 't': ['т'],
