@@ -630,13 +630,18 @@ class SettingsClass():
     async def toggle_settings_callback(callback_query: CallbackQuery, **kwargs):
         groupmodel = kwargs['groupmodel']
         setting_name = callback_query.data.replace("toggle_", "")
-        group_id = callback_query.message.chat.id
+
+        if setting_name.startswith('close_settings'):
+            await callback_query.message.edit_text('✅ Настройки сохранены')
+            return
+
+        group_id = int(callback_query.data.split("gid_")[-1])
 
         result = await groupmodel.toggle_setting(group_id, setting_name)
 
         if result['status'] == 'ok':
             settings = await groupmodel.get_group_settings(group_id)
+
             await callback_query.message.edit_reply_markup(reply_markup=settings_keyboard(settings))
-            await callback_query.answer(f"{setting_name} переключено")
         else:
             await callback_query.answer("Ошибка при переключении")

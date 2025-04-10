@@ -84,7 +84,7 @@ async def init_db(pool):
                     groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
                     userid BIGINT REFERENCES users(userid) ON DELETE SET NULL, -- км охрги марта настройка кганини сакласе болади
                     nsfw_prots INTEGER DEFAULT 20,
-                    photo_with_opencv BOOLEAN DEFAULT TRUE,
+                    photo_with_opencv BOOLEAN DEFAULT FALSE,
                     logs BOOLEAN DEFAULT FALSE,
                     PRIMARY KEY (groupid)
                 );
