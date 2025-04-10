@@ -90,6 +90,7 @@ class GroupModel(MainModel):
             async with self.pool.acquire() as conn:
                 await conn.execute('INSERT INTO groups (groupid, username, name) VALUES ($1, $2, $3)', groupid, username, name)
                 await conn.execute('INSERT INTO group_states (groupid) VALUES ($1)', groupid)
+                await conn.execute('INSERT INTO group_settings (groupid) VALUES ($1)', groupid)
                 return {'status': 'ok','groupid': groupid, 'username': username, 'name': name}
         except Exception as e:
             logging.error(f'add_group error: {e}')
@@ -102,7 +103,7 @@ class GroupModel(MainModel):
                 await conn.execute('DELETE FROM groups WHERE groupid = $1', groupid)
                 return {'status': 'ok'}
         except Exception as e:
-            logging.error(f'__add_group error: {e}')
+            logging.error(f'delete_group error: {e}')
             return {'status': 'error'}
 
     async def get_group(self, groupid):
