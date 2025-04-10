@@ -4,13 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="/remove 1">
+    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="settings chala 1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/handlers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/handlers/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/keyboards/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/keyboards/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/models/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/models/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/states/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/states/config.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -278,7 +276,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744187455065</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="settings chala 1">
+      <option name="closed" value="true" />
+      <created>1744231471095</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1744231471095</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -295,6 +301,7 @@
     <MESSAGE value="delete_message_text 1.1 (q -&gt; к')" />
     <MESSAGE value="delete_message on db 1" />
     <MESSAGE value="/remove 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="/remove 1" />
+    <MESSAGE value="settings chala 1" />
+    <option name="LAST_COMMIT_MESSAGE" value="settings chala 1" />
   </component>
 </project>

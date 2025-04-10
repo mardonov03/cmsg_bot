@@ -15,6 +15,7 @@ def cancel():
     return ReplyKeyboardRemove()
 
 def settings_keyboard(settings: dict):
+    print(settings)
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"📜 Логи: {'✅' if settings.get('logs') else '❌'}", callback_data='toggle_logs')],
         [InlineKeyboardButton(text=f"📸 Фото с OpenCV: {'✅' if settings.get('photo_with_opencv') else '❌'}", callback_data='toggle_photo_with_opencv')],

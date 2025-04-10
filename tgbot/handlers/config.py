@@ -562,13 +562,22 @@ class SettingsClass():
     async def handle_settings(message: Message, state: FSMContext, **kwargs) -> None:
         groupmodel: GroupModel = kwargs['groupmodel']
         if message.chat.type != 'private':
+
+            result = await groupmodel.get_group(message.chat.id)
+
+            if not result:
+                await groupmodel.add_group(message.chat.id)
+
             is_user_creator = await groupmodel.is_user_creator(message.chat.id, message.from_user.id)
             if is_user_creator['result'] != 'creator':
                 return
             await message.answer('👾 Настроить бота можно только в личном чате. Меню уже отправлено.')
 
             settings = await groupmodel.get_group_settings(message.chat.id)
-            await message.bot.send_message(message.from_user.id, '⚙️ Настройки группы:', reply_markup=settings_keyboard(settings))
+            mes = await message.bot.send_message(message.from_user.id ,'Клавиатура убрана.', reply_markup=cancel())
+            await message.bot.delete_message(message.from_user.id, mes.message_id)
+            await state.clear()
+            await message.bot.send_message(message.from_user.id, f'⚙️ Настройки группы: <b>{message.chat.full_name}</b>', reply_markup=settings_keyboard(settings), parse_mode='HTML')
         else:
             usersmodel: UsersModel = kwargs['usersmodel']
 
@@ -582,6 +591,7 @@ class SettingsClass():
                 return
 
             await message.answer('Выберите группу для настройки',reply_markup=group_list([i['name'] for i in user_groups['groups']]))
+            await state.update_data(g_list=[[i['name'], i['groupid']] for i in user_groups['groups']])
             await state.set_state(SettingsState.settngs_select_group_state)
 
     @staticmethod
@@ -600,17 +610,18 @@ class SettingsClass():
         if selected_group:
             groupid = selected_group[1]
             try:
-                usersmodel: UsersModel = kwargs['usersmodel']
+                groupmodel: GroupModel = kwargs['groupmodel']
+                is_user_creator = await groupmodel.is_user_creator(groupid, message.from_user.id)
 
-                if data['action'] and data['action'] == '/remove':
-                    action = 'remove'
-                else:
-                    action = 'add'
-                restult = await usersmodel.last_group_update(groupid, message.from_user.id, action)
-                if restult:
-                    await message.answer('Группа выбрана удачно', reply_markup=cancel())
-                else:
-                    await message.answer('Нам не удалось выбрать группу', reply_markup=cancel())
+                if not is_user_creator['result'] == 'creator':
+                    await state.clear()
+                    await message.answer('Вы уже не являетесь создателем этой группы', reply_markup=cancel())
+                    return
+                settings = await groupmodel.get_group_settings(groupid)
+                if settings['status'] == 'ok':
+                    mes = await message.answer('Клавиатура убрана.',reply_markup=cancel())
+                    await message.bot.delete_message(message.chat.id, mes.message_id)
+                    await message.bot.send_message(message.from_user.id, f'⚙️ Настройки группы: <b>{selected_group[0]}</b>',reply_markup=settings_keyboard(settings), parse_mode='HTML')
                 await state.clear()
             except Exception as e:
                 logging.error(f'"select_group error": {e}')
