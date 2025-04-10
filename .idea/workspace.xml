@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="settings chala 1">
+    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="toggle_setting 1 (error)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tgbot/database/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/database/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/handlers/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/keyboards/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/keyboards/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/models/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/models/config.py" afterDir="false" />
@@ -284,7 +285,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744231471095</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="toggle_setting 1 (error)">
+      <option name="closed" value="true" />
+      <created>1744279010124</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1744279010124</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -302,6 +311,7 @@
     <MESSAGE value="delete_message on db 1" />
     <MESSAGE value="/remove 1" />
     <MESSAGE value="settings chala 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="settings chala 1" />
+    <MESSAGE value="toggle_setting 1 (error)" />
+    <option name="LAST_COMMIT_MESSAGE" value="toggle_setting 1 (error)" />
   </component>
 </project>

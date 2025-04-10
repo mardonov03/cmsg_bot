@@ -185,7 +185,7 @@ class GroupModel(MainModel):
         try:
             async with self.pool.acquire() as conn:
                 result = await conn.fetchrow('SELECT userid, nsfw_prots, photo_with_opencv, logs FROM group_settings WHERE groupid = $1', groupid)
-                return {'status': 'ok', 'userid': result['userid'], 'nsfw_prots': result['nsfw_prots'],'photo_with_opencv': result['photo_with_opencv'], 'logs': result['logs']}
+                return {'status': 'ok', 'userid': result['userid'], 'nsfw_prots': result['nsfw_prots'],'photo_with_opencv': result['photo_with_opencv'], 'logs': result['logs'], 'groupid': groupid}
         except Exception as e:
             logging.error(f'"get_group_settings error": {e}')
             return {'status': 'error'}
@@ -193,19 +193,33 @@ class GroupModel(MainModel):
     async def toggle_setting(self, groupid: int, setting: str):
         try:
             async with self.pool.acquire() as conn:
-                if setting == "logs":
-                    current_value = await conn.fetchval('SELECT logs FROM group_settings WHERE groupid = $1', groupid)
-                    new_value = not current_value  # Переключение значения
+                setting = setting.split('_gid_')
+                setting = setting[0]
+
+                if setting.startswith("logs"):
+                    value = setting.replace('logs_', '')
+
+                    new_value = True if value == 'False' else False
+                    print('new_value: ', new_value)
                     await conn.execute('UPDATE group_settings SET logs = $1 WHERE groupid = $2', new_value, groupid)
-                elif setting == "photo_with_opencv":
-                    current_value = await conn.fetchval('SELECT photo_with_opencv FROM group_settings WHERE groupid = $1', groupid)
-                    new_value = not current_value
+
+                elif setting.startswith("photo_with_opencv"):
+                    value = setting.replace('photo_with_opencv_', '')
+
+                    new_value = True if value == 'False' else False
                     await conn.execute('UPDATE group_settings SET photo_with_opencv = $1 WHERE groupid = $2', new_value, groupid)
-                elif setting == "nsfw_prots":
-                    # Для числового параметра, можно увеличить или уменьшить (например, на 10)
-                    current_value = await conn.fetchval('SELECT nsfw_prots FROM group_settings WHERE groupid = $1', groupid)
-                    new_value = (current_value + 10) % 100  # Пример, можно изменить логику
+
+                elif setting.startswith("nsfw_prots"):
+                    value = setting.replace('nsfw_prots_', '')
+
+                    if int(value) == 20:
+                        new_value = 40
+                    elif int(value) == 40:
+                        new_value = 60
+                    else:
+                        new_value = 20
                     await conn.execute('UPDATE group_settings SET nsfw_prots = $1 WHERE groupid = $2', new_value, groupid)
+
                 return {'status': 'ok'}
         except Exception as e:
             logging.error(f'"toggle_setting error": {e}')
