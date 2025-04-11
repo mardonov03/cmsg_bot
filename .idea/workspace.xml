@@ -4,17 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="toggle_setting 1 (error)">
+    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="settings 1 (full need to deep test)">
+      <change afterPath="$PROJECT_DIR$/tgbot/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/database/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/database/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/handlers/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/keyboards/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/keyboards/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/models/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/models/config.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -43,7 +47,7 @@
       <recent name="C:\Users\komro\cleanermsgbot" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.__main__ (1)">
+  <component name="RunManager" selected="Python.test">
     <configuration name="__main__ (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="base_bot" />
       <option name="ENV_FILES" value="" />
@@ -134,8 +138,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.__main__ (1)" />
         <item itemvalue="Python.test" />
+        <item itemvalue="Python.__main__ (1)" />
         <item itemvalue="Python.__main__" />
         <item itemvalue="Python.webhook" />
       </list>
@@ -293,7 +297,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744279010124</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="settings 1 (full need to deep test)">
+      <option name="closed" value="true" />
+      <created>1744287650309</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1744287650309</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -312,6 +324,7 @@
     <MESSAGE value="/remove 1" />
     <MESSAGE value="settings chala 1" />
     <MESSAGE value="toggle_setting 1 (error)" />
-    <option name="LAST_COMMIT_MESSAGE" value="toggle_setting 1 (error)" />
+    <MESSAGE value="settings 1 (full need to deep test)" />
+    <option name="LAST_COMMIT_MESSAGE" value="settings 1 (full need to deep test)" />
   </component>
 </project>

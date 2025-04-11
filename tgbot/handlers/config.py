@@ -99,6 +99,26 @@ async def select_group(message:Message, state:FSMContext, **kwargs):
     if selected_group:
         groupid = selected_group[1]
         try:
+            groupmodel: GroupModel = kwargs['groupmodel']
+            is_user_creator = await groupmodel.is_user_creator(selected_group[1], message.from_user.id)
+
+            if not is_user_creator['result'] == 'creator':
+                await state.clear()
+                await message.answer('Вы уже не являетесь содателем этой группы',reply_markup=cancel())
+                return
+
+            is_bot_admin = await groupmodel.is_bot_admin(groupid)
+
+            if not is_bot_admin:
+                await message.answer("🛠 Мне нужны права администратора на:\n\n✔️Удаление сообщений\n✔️Блокировка Пользователей")
+                return
+
+            permissions = await groupmodel.get_bot_privileges(groupid)
+
+            if permissions['status'] == 'no':
+                await message.answer(f"🛠 Мне не хватает прав:\n\n" + "\n".join(permissions['missed']))
+                return
+
             usersmodel: UsersModel = kwargs['usersmodel']
 
             if data['action'] and data['action']=='/remove':
@@ -506,6 +526,19 @@ class RegisterMessage():
                 await message.answer('Вы уже не являетесь содателем этой группы',reply_markup=cancel())
                 return
 
+            is_bot_admin = await groupmodel.is_bot_admin(groupid)
+
+            if not is_bot_admin:
+                await message.answer("🛠 Мне нужны права администратора на:\n\n✔️Удаление сообщений\n✔️Блокировка Пользователей")
+                return
+
+            permissions = await groupmodel.get_bot_privileges(groupid)
+
+            if permissions['status'] == 'no':
+                await message.answer(f"🛠 Мне не хватает прав:\n\n" + "\n".join(permissions['missed']))
+                return
+
+
             try:
                 action_list = ['text', 'photo']
                 await message.answer('Список чего вам нужен?', reply_markup=group_list(action_list))
@@ -571,6 +604,19 @@ class SettingsClass():
             is_user_creator = await groupmodel.is_user_creator(message.chat.id, message.from_user.id)
             if is_user_creator['result'] != 'creator':
                 return
+
+            is_bot_admin = await groupmodel.is_bot_admin(message.chat.id)
+
+            if not is_bot_admin:
+                await message.answer("🛠 Мне нужны права администратора на:\n\n✔️Удаление сообщений\n✔️Блокировка Пользователей")
+                return
+
+            permissions = await groupmodel.get_bot_privileges(message.chat.id)
+
+            if permissions['status'] == 'no':
+                await message.answer(f"🛠 Мне не хватает прав:\n\n" + "\n".join(permissions['missed']))
+                return
+
             await message.answer('👾 Настроить бота можно только в личном чате. Меню уже отправлено.')
 
             settings = await groupmodel.get_group_settings(message.chat.id)
@@ -617,6 +663,19 @@ class SettingsClass():
                     await state.clear()
                     await message.answer('Вы уже не являетесь создателем этой группы', reply_markup=cancel())
                     return
+
+                is_bot_admin = await groupmodel.is_bot_admin(groupid)
+
+                if not is_bot_admin:
+                    await message.answer("🛠 Мне нужны права администратора на:\n\n✔️Удаление сообщений\n✔️Блокировка Пользователей")
+                    return
+
+                permissions = await groupmodel.get_bot_privileges(groupid)
+
+                if permissions['status'] == 'no':
+                    await message.answer(f"🛠 Мне не хватает прав:\n\n" + "\n".join(permissions['missed']))
+                    return
+
                 settings = await groupmodel.get_group_settings(groupid)
                 if settings['status'] == 'ok':
                     mes = await message.answer('Клавиатура убрана.',reply_markup=cancel())
@@ -630,12 +689,29 @@ class SettingsClass():
     async def toggle_settings_callback(callback_query: CallbackQuery, **kwargs):
         groupmodel = kwargs['groupmodel']
         setting_name = callback_query.data.replace("toggle_", "")
+        group_id = int(callback_query.data.split("gid_")[-1])
+
+        is_user_creator = await groupmodel.is_user_creator(int(callback_query.data.split("gid_")[-1]), callback_query.from_user.id)
+        if not is_user_creator['result'] == 'creator':
+            await callback_query.message.edit_text('Вы уже не являетесь содателем этой группы', reply_markup=cancel())
+            return
+
+        is_bot_admin = await groupmodel.is_bot_admin(group_id)
+
+        if not is_bot_admin:
+            await callback_query.answer("🛠 Мне нужны права администратора на:\n\n✔️Удаление сообщений\n✔️Блокировка Пользователей")
+            return
+
+        permissions = await groupmodel.get_bot_privileges(group_id)
+
+        if permissions['status'] == 'no':
+            await callback_query.answer(f"🛠 Мне не хватает прав:\n\n" + "\n".join(permissions['missed']))
+            return
+
 
         if setting_name.startswith('close_settings'):
             await callback_query.message.edit_text('✅ Настройки сохранены')
             return
-
-        group_id = int(callback_query.data.split("gid_")[-1])
 
         result = await groupmodel.toggle_setting(group_id, setting_name)
 
