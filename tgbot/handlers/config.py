@@ -540,7 +540,7 @@ class RegisterMessage():
 
 
             try:
-                action_list = ['text', 'photo']
+                action_list = ['текст', 'стикер', 'гиф', 'голосовое', 'документ', 'фото', 'видео', 'видео кружок']
                 await message.answer('Список чего вам нужен?', reply_markup=group_list(action_list))
                 await state.update_data(action_list=action_list, group_id=groupid, groupname= selected_group[0])
                 await state.set_state(UserState.get_ban_list_state_2)
@@ -557,12 +557,14 @@ class RegisterMessage():
         data = await state.get_data()
 
         if not message.text in data['action_list']:
-            action_list = ['text', 'photo']
+            action_list = ['текст', 'стикер', 'гиф', 'голосовое', 'документ', 'фото', 'видео', 'видео кружок']
             await message.answer('Неправильная комманда, пожалюста повторите ввод', reply_markup=group_list(action_list))
             await state.set_state(UserState.get_ban_list_state_2)
             return
 
-        action = message.text
+        action_list_db_form = {'текст': 'text', 'стикер': 'sticker', 'гиф': 'animation', 'голосовое': 'voice', 'документ': 'document', 'фото': 'photo', 'видео': 'video', 'видео кружок': 'video_note'}
+
+        action = action_list_db_form[message.text]
         groupid = data['group_id']
         groupname= data['groupname']
 

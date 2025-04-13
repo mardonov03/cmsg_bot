@@ -25,6 +25,7 @@ class UsersModel(MainModel):
             async with self.pool.acquire() as conn:
                 await conn.execute('INSERT INTO users (userid, username, name) VALUES ($1, $2, $3)', userid, username, name)
                 await conn.execute('INSERT INTO user_states (userid) VALUES ($1)', userid)
+                await conn.execute('INSERT INTO user_agreement (userid, agreement_status) VALUES ($1, $2)', userid, False)
             return {'userid': userid, 'username': username, 'name': name}
 
         except Exception as e:
@@ -36,9 +37,10 @@ class UsersModel(MainModel):
                 result = await conn.fetchrow('SELECT * FROM users WHERE userid = $1', userid)
                 if not result:
                     result = await self.__add_user(userid)
-                return {"userid": result["userid"], "username": result["username"], "name": result['name']}
+                return {"userid": result["userid"], "username": result["username"], "name": result['name'], 'user_agreement': result['user_agreement']}
         except Exception as e:
             logging.error(f'"get_user error: {e}')
+
 
     async def get_user_groups(self, userid):
         try:
