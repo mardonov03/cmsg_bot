@@ -1,5 +1,5 @@
 import logging
-from tgbot.keyboards.config import group_list, cancel, settings_keyboard
+from tgbot.keyboards.config import group_list, cancel, settings_keyboard, agreement_keyboard
 from aiogram.types import Message, ChatMemberUpdated, CallbackQuery
 from tgbot.models.config import UsersModel, GroupModel, MessagesModel
 from aiogram.fsm.context import FSMContext
@@ -11,7 +11,7 @@ async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
         try:
             groupid = message.chat.id
 
-            if not message.text.startswith('/start@cleanermsgbot'):
+            if not message.text.startswith('/start@PurifyAiBot'):
                 return
 
             groupmodel: GroupModel = kwargs['groupmodel']
@@ -50,6 +50,18 @@ async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
             userid = message.from_user.id
             user_data = await usersmodel.get_user(userid)
 
+            user_agreement = await usersmodel.get_user_agreement(userid)
+
+            if user_agreement['mesid']:
+                try:
+                    await message.bot.delete_message(message.chat.id, user_agreement['mesid'])
+                except Exception as e:
+                    logging.info(f'info delete_message23255: {e}')
+
+            if not user_agreement['agreement_status']:
+                await handle_user_agreement(message, **kwargs)
+                return
+
             user_groups = await usersmodel.get_user_groups(userid)
 
             if not user_groups or not user_groups['status'] == 'ok':
@@ -61,7 +73,7 @@ async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
             await state.update_data(action=message.text)
             await state.set_state(UserState.select_group_state)
         except Exception as e:
-            logging.error(f'"handle_start error (private": {e}')
+            logging.error(f'"handle_start error (private): {e}')
 
 async def select_group_1(message:Message, state: FSMContext, **kwargs):
     if message.chat.type == 'private':
@@ -70,6 +82,18 @@ async def select_group_1(message:Message, state: FSMContext, **kwargs):
 
             userid = message.from_user.id
             user_data = await usersmodel.get_user(userid)
+
+            user_agreement = await usersmodel.get_user_agreement(userid)
+
+            if user_agreement['mesid']:
+                try:
+                    await message.bot.delete_message(message.chat.id, user_agreement['mesid'])
+                except Exception as e:
+                    logging.info(f'info delete_message23255: {e}')
+
+            if not user_agreement['agreement_status']:
+                await handle_user_agreement(message, **kwargs)
+                return
 
             user_groups = await usersmodel.get_user_groups(userid)
 
@@ -140,7 +164,7 @@ async def handle_stop(message: Message, **kwargs) -> None:
         try:
             groupid = message.chat.id
 
-            if not message.text.startswith('/stop@cleanermsgbot'):
+            if not message.text.startswith('/stop@PurifyAiBot'):
                 return
 
             groupmodel: GroupModel = kwargs['groupmodel']
@@ -349,6 +373,7 @@ class RegisterMessage():
                 if action == 'remove':
                     if message.content_type == 'text':
                         result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.text)
+                        print(result)
                         if result['status'] == 'ok':
                             await message.answer(f'📄 Слово "<b>{message.text}</b>" <b>удалён</b>🗑 из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
                         else:
@@ -491,6 +516,18 @@ class RegisterMessage():
             userid = message.from_user.id
             user_data = await usersmodel.get_user(userid)
 
+            user_agreement = await usersmodel.get_user_agreement(userid)
+
+            if user_agreement['mesid']:
+                try:
+                    await message.bot.delete_message(message.chat.id, user_agreement['mesid'])
+                except Exception as e:
+                    logging.info(f'info delete_message23255: {e}')
+
+            if not user_agreement['agreement_status']:
+                await handle_user_agreement(message, **kwargs)
+                return
+
             user_groups = await usersmodel.get_user_groups(userid)
 
             if not user_groups or not user_groups['status'] == 'ok':
@@ -578,7 +615,7 @@ class RegisterMessage():
             return
 
         try:
-            ban_list = await groupmodel.get_ban_words(groupid, message.text)
+            ban_list = await groupmodel.get_ban_words(groupid, action)
 
             sorted_list = sorted(ban_list, key=lambda x: str(x['message_id']))
             chunks = [sorted_list[i:i + 4] for i in range(0, len(sorted_list), 4)]
@@ -595,6 +632,9 @@ class RegisterMessage():
 class SettingsClass():
     @staticmethod
     async def handle_settings(message: Message, state: FSMContext, **kwargs) -> None:
+        if not message.text.startswith('/settings@PurifyAiBot'):
+            return
+
         groupmodel: GroupModel = kwargs['groupmodel']
         if message.chat.type != 'private':
 
@@ -619,6 +659,26 @@ class SettingsClass():
                 await message.answer(f"🛠 Мне не хватает прав:\n\n" + "\n".join(permissions['missed']))
                 return
 
+            usersmodel: UsersModel = kwargs['usersmodel']
+
+            userid = message.from_user.id
+            user_data = await usersmodel.get_user(userid)
+
+            user_agreement = await usersmodel.get_user_agreement(userid)
+
+            if user_agreement['mesid']:
+                try:
+                    await message.bot.delete_message(message.from_user.id, user_agreement['mesid'])
+                except Exception as e:
+                    logging.info(f'info delete_message63723: {e}')
+
+            if not user_agreement['agreement_status']:
+                await handle_user_agreement(message, **kwargs)
+                await message.answer("⚙️ <b>Бот временно недоступен</b>\n\nВладелец группы ещё не подтвердил пользовательское соглашение. Пожалуйста, подождите или свяжитесь с ним.",parse_mode="HTML")
+
+                return
+
+
             await message.answer('👾 Настроить бота можно только в личном чате. Меню уже отправлено.')
 
             settings = await groupmodel.get_group_settings(message.chat.id)
@@ -631,6 +691,18 @@ class SettingsClass():
 
             userid = message.from_user.id
             user_data = await usersmodel.get_user(userid)
+
+            user_agreement = await usersmodel.get_user_agreement(userid)
+
+            if user_agreement['mesid']:
+                try:
+                    await message.bot.delete_message(message.chat.id, user_agreement['mesid'])
+                except Exception as e:
+                    logging.info(f'info delete_message23255: {e}')
+
+            if not user_agreement['agreement_status']:
+                await handle_user_agreement(message, **kwargs)
+                return
 
             user_groups = await usersmodel.get_user_groups(userid)
 
@@ -723,3 +795,32 @@ class SettingsClass():
             await callback_query.message.edit_reply_markup(reply_markup=settings_keyboard(settings))
         else:
             await callback_query.answer("Ошибка при переключении")
+
+async def handle_user_agreement(message: Message, **kwargs):
+    try:
+        text = ("<b>📜 Пользовательское соглашение</b>\n\nПеред использованием бота, пожалуйста, ознакомьтесь с нашим\n\n🇷🇺 Ru: <b><a href='https://telegra.ph/Polzovatelskoe-Soglashenie-PurifyAi-04-13-2'>Пользовательское Соглашение</a> </b>.\n\n🇺🇸 En: <b><a href='https://telegra.ph/User-Agreement-PurifyAi-04-13'>User Agreement</a> </b>.\n\n🇺🇿 Uz: <b><a href='https://telegra.ph/Foydalanuvchi-Shartnomasi-PurifyAi-04-13'>Foydalanuvchi Shartnomasi</a> </b>.\n\nВы согласны с условиями?")
+        mes = await message.bot.send_message(message.from_user.id, text, reply_markup=agreement_keyboard(), parse_mode="HTML", disable_web_page_preview=True)
+        usersmodel: UsersModel = kwargs['usersmodel']
+
+        await usersmodel.update_agreement_mesid(message.from_user.id, mes.message_id)
+    except Exception as e:
+        logging.error(f'"handle_user_agreement error": {e}')
+
+async def handle_user_agreement_selected(callback_query: CallbackQuery, **kwargs):
+    userid = callback_query.from_user.id
+    selected = callback_query.data.replace('agreement_', '')
+    try:
+
+        usersmodel: UsersModel = kwargs['usersmodel']
+
+        if selected == 'yes':
+            res = await usersmodel.agreement_yes(userid)
+            if res['status'] == 'ok':
+                await callback_query.message.edit_text("<b>✅ Вы успешно подтвердили соглашение.</b>\n\nСпасибо за согласие!",parse_mode="HTML")
+            else:
+                await callback_query.answer("❌ Ошибка: доступ не разрешён. Повторите попытку.",show_alert=True)
+        elif selected == 'no':
+            await callback_query.message.edit_text("<b>❌ Вы отклонили пользовательское соглашение.</b>\n\nК сожалению, вы не можете использовать бота без согласия.",parse_mode="HTML")
+    except Exception as e:
+        logging.error(f'"handle_user_agreement_selected error": {e}')
+        await callback_query.answer("Произошла ошибка. Попробуйте позже.", show_alert=True)

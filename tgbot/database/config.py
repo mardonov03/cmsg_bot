@@ -32,7 +32,8 @@ async def init_db(pool):
                 CREATE TABLE IF NOT EXISTS user_agreement (
                     userid BIGINT PRIMARY KEY REFERENCES users(userid) ON DELETE CASCADE,
                     agreement_status BOOLEAN NOT NULL DEFAULT FALSE,
-                    agreement_time TIMESTAMP NOT NULL DEFAULT NOW()
+                    mesid BIGINT,
+                    update_time TIMESTAMP NOT NULL DEFAULT NOW()
                 );
             """)
 
