@@ -21,3 +21,11 @@ def settings_keyboard(settings: dict):
         [InlineKeyboardButton(text=f"🔞 NSFW: {settings.get('nsfw_prots')}", callback_data=f'toggle_nsfw_prots_{str(settings.get('nsfw_prots'))}_gid_{str(settings.get('groupid'))}')],
         [InlineKeyboardButton(text="❌ Закрыть", callback_data=f'toggle_close_settings_gid_{str(settings.get('groupid'))}')]
     ])
+
+def agreement_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Да, я согласен", callback_data="agreement_yes"),
+            InlineKeyboardButton(text="❌ Нет, я не согласен", callback_data="agreement_no")
+        ]
+    ])

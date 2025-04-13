@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.filters import Command, ChatMemberUpdatedFilter, IS_NOT_MEMBER, IS_MEMBER, ADMINISTRATOR, StateFilter, KICKED
-from tgbot.handlers.config import handle_start, on_bot_added, register_creator, handle_stop, select_group, on_bot_deleted, SettingsClass, RegisterMessage, CheckMessage, select_group, select_group_1
+from tgbot.handlers.config import handle_start, on_bot_added, register_creator, handle_stop, select_group, on_bot_deleted, SettingsClass, RegisterMessage, CheckMessage, select_group, select_group_1, handle_user_agreement_selected
 from tgbot.states.config import UserState, SettingsState
 
 def setup() -> Router:
@@ -13,6 +13,8 @@ def setup() -> Router:
     router.message.register(select_group_1, Command(commands=['add', 'remove'], ignore_mention=True))
 
     router.callback_query.register(SettingsClass.toggle_settings_callback, F.data.startswith("toggle_"))
+
+    router.callback_query.register(handle_user_agreement_selected, F.data.startswith("agreement_"))
 
     router.my_chat_member.register(on_bot_added, ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))
 

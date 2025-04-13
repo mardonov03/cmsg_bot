@@ -1,3 +1,4 @@
+import datetime
 import logging
 import betterlogging as bl
 import os
@@ -37,9 +38,36 @@ class UsersModel(MainModel):
                 result = await conn.fetchrow('SELECT * FROM users WHERE userid = $1', userid)
                 if not result:
                     result = await self.__add_user(userid)
-                return {"userid": result["userid"], "username": result["username"], "name": result['name'], 'user_agreement': result['user_agreement']}
+                return {"userid": result["userid"], "username": result["username"], "name": result['name']}
         except Exception as e:
             logging.error(f'"get_user error: {e}')
+
+    async def get_user_agreement(self, userid):
+        try:
+            async with self.pool.acquire() as conn:
+                result = await conn.fetchrow('SELECT * FROM user_agreement WHERE userid = $1', userid)
+                return {'status': 'ok', 'agreement_status': result['agreement_status'], 'update_time': result['update_time'], 'mesid':result['mesid']}
+        except Exception as e:
+            logging.error(f'"get_user error: {e}')
+            return {'status': 'no', 'agreement_status': None, 'update_time': None}
+
+    async def agreement_yes(self, userid):
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute('UPDATE user_agreement SET agreement_status = $1, update_time = $2, mesid = NULL WHERE userid = $3',True, datetime.datetime.now(), userid)
+                return {"status": 'ok'}
+        except Exception as e:
+            logging.error(f'"get_user error: {e}')
+            return {"status": 'error'}
+
+    async def update_agreement_mesid(self, userid, mesid):
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute('UPDATE user_agreement SET mesid = $1 WHERE userid = $2',mesid,userid)
+                return {"status": 'ok'}
+        except Exception as e:
+            logging.error(f'"agreement_mesid error: {e}')
+            return {"status": 'error'}
 
 
     async def get_user_groups(self, userid):
@@ -257,39 +285,14 @@ class MessagesModel(MainModel):
                 return
 
             message_filter = re.sub(r"[^a-zа-яёңұүөқғ\s']", '', message_text.lower())
-            message_filter = re.sub(r'(.)\1+', r'\1', message_filter)
+            message_filter_no_duplicates = re.sub(r'(.)\1+', r'\1', message_filter)
+
             words = message_filter.split()
+            words_no_duplicates = message_filter_no_duplicates.split()
+
             all_combinations = []
-
-            for word in words:
-                parsed_letters = []
-                skip = False
-                for i in range(len(word)):
-                    if skip:
-                        skip = False
-                        continue
-                    if i + 1 < len(word) and word[i + 1] == "'" and word[i] == 'к':
-                        parsed_letters.append(word[i] + "'")
-                        skip = True
-                    else:
-                        parsed_letters.append(word[i])
-
-                variants_per_letter = []
-                for letter in parsed_letters:
-                    if letter in self.kir_to_lat:
-                        variants = self.kir_to_lat[letter] + [letter]
-                        variants_per_letter.append(variants)
-                    elif letter in 'abcdefghijklmnopqrstuvwxyz':
-                        lat_to_kir = [k for k, v in self.kir_to_lat.items() if letter in v]
-                        variants = [letter] + lat_to_kir
-                        variants_per_letter.append(variants)
-                    else:
-                        variants_per_letter.append([''])
-
-                word_variants = [''.join(comb) for comb in itertools.product(*variants_per_letter)]
-                all_combinations.extend(word_variants)
-
-            print(all_combinations)
+            for word in words + words_no_duplicates:
+                all_combinations.extend(self.__get_word_variants(word))
 
             async with self.pool.acquire() as conn:
                 global_ban_rows = await conn.fetch('SELECT message_id FROM global_ban_messages WHERE message_type = $1', "text")
@@ -300,17 +303,51 @@ class MessagesModel(MainModel):
 
             if len(message_text) >= 7 and ' ' not in message_text:
                 for banword in global_ban_words:
-                    if banword in message_text:
-                        return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok','banword': banword}
+                    if banword in words_no_duplicates:
+                        return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': banword}
+                for banword in all_combinations:
+                    if banword in words_no_duplicates:
+                        return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': banword}
 
-                for banword in group_ban_words:
-                    if banword in message_text:
-                        return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no','banword': banword}
+            for banword in global_ban_words:
+                if banword in all_combinations:
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no', 'banword': banword}
+            for banword in group_ban_words:
+                if banword in all_combinations:
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no', 'banword': banword}
 
-            return {'status': 'ok', 'groupid': groupid, 'is_banned': 'no', 'is_global': None, 'banword': None}
+            return {'status': 'ok', 'groupid': groupid,'is_banned': 'no', 'is_global': None,'banword': None}
+
         except Exception as e:
             logging.error(f'"scan_message_text error": {e}')
-            return {'status': 'error', 'groupid': groupid, 'is_banned': '', 'is_global': '', 'banword': ''}
+            return {'status': 'error', 'groupid': groupid,'is_banned': '', 'is_global': '', 'banword': ''}
+
+    def __get_word_variants(self, word):
+        parsed_letters = []
+        skip = False
+        for i in range(len(word)):
+            if skip:
+                skip = False
+                continue
+            if i + 1 < len(word) and word[i + 1] == "'" and word[i] == 'к':
+                parsed_letters.append(word[i] + "'")
+                skip = True
+            else:
+                parsed_letters.append(word[i])
+
+        variants_per_letter = []
+        for letter in parsed_letters:
+            if letter in self.kir_to_lat:
+                variants = self.kir_to_lat[letter] + [letter]
+                variants_per_letter.append(variants)
+            elif letter in 'abcdefghijklmnopqrstuvwxyz':
+                lat_to_kir = [k for k, v in self.kir_to_lat.items() if letter in v]
+                variants = [letter] + lat_to_kir
+                variants_per_letter.append(variants)
+            else:
+                variants_per_letter.append([''])
+
+        return [''.join(comb) for comb in itertools.product(*variants_per_letter)]
 
     async def scan_message_photo(self, message, groupid):
         photo = message.photo[-1]
@@ -355,7 +392,6 @@ class MessagesModel(MainModel):
         except Exception as e:
             logging.error(f'scan_message_text error: {e}')
             return {'status': 'error', 'message_status': '', 'is_global': '', 'groupid': '', 'message_id': ''}
-
 
     async def __check_global(self, message_id, message_type):
         try:
