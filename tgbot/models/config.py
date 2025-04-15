@@ -305,7 +305,7 @@ class MessagesModel(MainModel):
                 for banword in global_ban_words:
                     if banword in words_no_duplicates:
                         return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': banword}
-                for banword in all_combinations:
+                for banword in group_ban_words:
                     if banword in words_no_duplicates:
                         return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': banword}
 
@@ -321,6 +321,18 @@ class MessagesModel(MainModel):
         except Exception as e:
             logging.error(f'"scan_message_text error": {e}')
             return {'status': 'error', 'groupid': groupid,'is_banned': '', 'is_global': '', 'banword': ''}
+
+    async def scan_message_sticker(self, sticker_id, groupid):
+        try:
+            async with self.pool.acquire() as conn:
+                group_ban_stickers = await conn.fetch('SELECT message_id FROM ban_messages WHERE message_type = $1 AND groupid = $2', "sticker", groupid)
+
+                if sticker_id in [record['message_id'] for record in group_ban_stickers]:
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'bansticker': sticker_id}
+                return {'status': 'ok', 'groupid': groupid, 'is_banned': 'no', 'bansticker': ''}
+        except Exception as e:
+            logging.error(f'"scan_message_text error": {e}')
+            return {'status': 'error', 'groupid': groupid,'is_banned': '', 'bansticker': ''}
 
     def __get_word_variants(self, word):
         parsed_letters = []

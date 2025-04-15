@@ -1,0 +1,9 @@
+tensorflow==2.16.1
+keras==3.3.3
+aiogram==3.14.0
+opennsfw2==0.14.0
+asyncpg==0.29.0
+betterlogging
+fastapi==0.115.3
+orjson==3.10.11
+uvicorn[standard]

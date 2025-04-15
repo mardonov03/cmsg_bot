@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: cmsg-bot
+    ports:
+      - "5000:5000"  # Пример, указываешь порты, которые нужны для взаимодействия с ботом
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: dexqon.uz.com.1
+      DB_NAME: cmsg
+      DB_HOST: db  # Имя сервиса базы данных из docker-compose
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    container_name: cmsg-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dexqon.uz.com.1
+      POSTGRES_DB: cmsg
+    ports:
+      - "5432:5432"

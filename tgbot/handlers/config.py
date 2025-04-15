@@ -322,14 +322,22 @@ class CheckMessage():
                     if result['is_banned'] == 'ok':
                         await message.bot.delete_message(groupid, message.message_id)
                         if is_logs_on['logs'] is True:
-                            await message.answer(f'Banned word: {str(result["banword"])}', parse_mode='HTML')
+                            await message.bot.send_message(userid, f'Banned word: {str(result["banword"])}', parse_mode='HTML')
+                return
+            if message.content_type == 'sticker':
+                is_banned = await messagesmodel.scan_message_sticker(message.sticker.file_unique_id, message.chat.id)
+
+                if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
+                    await message.bot.delete_message(message.chat.id, message.message_id)
+                    if is_logs_on['logs'] is True:
+                        await message.bot.send_message(userid, f'Banned sticker id: <b>{is_banned["bansticker"]}</b>', parse_mode='HTML')
                 return
             if message.content_type == 'photo':
                 is_banned = await messagesmodel.scan_message_photo(message, message.chat.id)
                 if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:
-                        await message.answer(f'Banned photo id: <b>{is_banned['message_id']}</b>', parse_mode='HTML')
+                        await message.bot.send_message(userid, f'Banned photo id: <b>{is_banned["message_id"]}</b>', parse_mode='HTML')
                 return
         except Exception as e:
             logging.error(f'"check_message error": {e}')
@@ -368,12 +376,15 @@ class RegisterMessage():
 
             if is_user_creator['result'] == 'creator':
                 group = await groupmodel.get_group(last_group['last_group_update'])
-                invite_link = await bot.export_chat_invite_link(last_group['last_group_update'])
+                if group['username']:
+                    invite_link = f"https://t.me/{group['username']}"
+                else:
+                    invite_link = await bot.export_chat_invite_link(last_group['last_group_update'])
                 action = last_group['action']
                 if action == 'remove':
                     if message.content_type == 'text':
                         result = await messagesmodel.delete_ban_message(last_group['last_group_update'], message.content_type,message.text)
-                        print(result)
+
                         if result['status'] == 'ok':
                             await message.answer(f'📄 Слово "<b>{message.text}</b>" <b>удалён</b>🗑 из запретов для <a href="{invite_link}"><b>{group["name"]}</b></a>.',parse_mode='HTML', disable_web_page_preview=True)
                         else:
@@ -632,11 +643,10 @@ class RegisterMessage():
 class SettingsClass():
     @staticmethod
     async def handle_settings(message: Message, state: FSMContext, **kwargs) -> None:
-        if not message.text.startswith('/settings@PurifyAiBot'):
-            return
-
         groupmodel: GroupModel = kwargs['groupmodel']
         if message.chat.type != 'private':
+            if not message.text.startswith('/settings@PurifyAiBot'):
+                return
 
             result = await groupmodel.get_group(message.chat.id)
 
