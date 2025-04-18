@@ -65,7 +65,7 @@ async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
             user_groups = await usersmodel.get_user_groups(userid)
 
             if not user_groups or not user_groups['status'] == 'ok':
-                await message.answer('У вас пока нет груп')
+                await message.answer('⚙ <b>Список групп пуст</b>.\n\nДобавьте бота в группу, где вы являетесь владельцем, и назначьте бота администратором.', parse_mode='HTML')
                 return
 
             await message.answer('Выберите группу для добавления сообщений', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
@@ -98,7 +98,7 @@ async def select_group_1(message:Message, state: FSMContext, **kwargs):
             user_groups = await usersmodel.get_user_groups(userid)
 
             if not user_groups or not user_groups['status'] == 'ok':
-                await message.answer('У вас пока нет груп')
+                await message.answer('⚙ <b>Список групп пуст</b>.\n\nДобавьте бота в группу, где вы являетесь владельцем, и назначьте бота администратором.', parse_mode='HTML')
                 return
 
             await message.answer('Выберите группу для добавления сообщений', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
@@ -368,6 +368,8 @@ class RegisterMessage():
     @staticmethod
     async def register_message_add_delete(message: Message, state:FSMContext, bot, **kwargs) -> None:
         userid = message.from_user.id
+        if userid == message.bot.id:
+            return
         try:
             if message.chat.type != 'private':
                 return
@@ -384,7 +386,7 @@ class RegisterMessage():
                 user_groups = await usersmodel.get_user_groups(userid)
 
                 if not user_groups or not user_groups['status'] == 'ok':
-                    await message.answer('У вас пока нет груп')
+                    await message.answer('⚙ <b>Список групп пуст</b>.\n\nДобавьте бота в группу, где вы являетесь владельцем, и назначьте бота администратором.',parse_mode='HTML')
                     return
 
                 await message.answer('Старих данних не нашли пожалюста выберите группу', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
@@ -563,7 +565,7 @@ class RegisterMessage():
             user_groups = await usersmodel.get_user_groups(userid)
 
             if not user_groups or not user_groups['status'] == 'ok':
-                await message.answer('У вас пока нет груп')
+                await message.answer('⚙ <b>Список групп пуст</b>.\n\nДобавьте бота в группу, где вы являетесь владельцем, и назначьте бота администратором.', parse_mode='HTML')
                 return
 
             await message.answer('Выберите группу для добавления сообщений', reply_markup=group_list([i['name'] for i in user_groups['groups']]))
@@ -738,7 +740,7 @@ class SettingsClass():
             user_groups = await usersmodel.get_user_groups(userid)
 
             if not user_groups or not user_groups['status'] == 'ok':
-                await message.answer('У вас пока нет груп')
+                await message.answer('⚙ <b>Список групп пуст</b>.\n\nДобавьте бота в группу, где вы являетесь владельцем, и назначьте бота администратором.', parse_mode='HTML')
                 return
 
             await message.answer('Выберите группу для настройки',reply_markup=group_list([i['name'] for i in user_groups['groups']]))
@@ -847,11 +849,34 @@ async def handle_user_agreement_selected(callback_query: CallbackQuery, **kwargs
         if selected == 'yes':
             res = await usersmodel.agreement_yes(userid)
             if res['status'] == 'ok':
-                await callback_query.message.edit_text("<b>✅ Вы успешно подтвердили соглашение.</b>\n\nСпасибо за согласие!",parse_mode="HTML")
+                await callback_query.message.edit_text("<b>✅ Вы успешно подтвердили соглашение</b>.\n\n🇷🇺 Ru: <b><a href='https://telegra.ph/Polzovatelskoe-Soglashenie-PurifyAi-04-13-2'>Пользовательское Соглашение</a> </b>.\n\n🇺🇸 En: <b><a href='https://telegra.ph/User-Agreement-PurifyAi-04-13'>User Agreement</a> </b>.\n\n🇺🇿 Uz: <b><a href='https://telegra.ph/Foydalanuvchi-Shartnomasi-PurifyAi-04-13'>Foydalanuvchi Shartnomasi</a> </b>.\n\nСпасибо за согласие!",parse_mode="HTML", disable_web_page_preview=True)
+                await callback_query.message.chat.pin_message(callback_query.message.message_id)
             else:
                 await callback_query.answer("❌ Ошибка: доступ не разрешён. Повторите попытку.",show_alert=True)
         elif selected == 'no':
             await callback_query.message.edit_text("<b>❌ Вы отклонили пользовательское соглашение.</b>\n\nК сожалению, вы не можете использовать бота без согласия.",parse_mode="HTML")
+            await callback_query.message.chat.pin_message(callback_query.message.message_id)
     except Exception as e:
         logging.error(f'"handle_user_agreement_selected error": {e}')
         await callback_query.answer("Произошла ошибка. Попробуйте позже.", show_alert=True)
+
+async def help_command(message: Message):
+    text = (
+        "Я бот-модератор. Моя задача — удалять нежелательные сообщения, фото, гифки, стикеры и NSFW-контент.\n\n"
+        "Как пользоваться:\n"
+        "1. Добавь меня в группу и дай права администратора.\n"
+        "2. Напиши /start в личке, выбери группу.\n"
+        "3. Добавь слова, фразы, стикеры или гифки — я буду их удалять.\n\n"
+        "Я использую ИИ для распознавания NSFW на фото и скоро смогу проверять стикеры.\n"
+        "Работаю по списку админов группы и глобальному фильтру."
+    )
+    if message.chat.type == 'private':
+        try:
+            await message.answer(text)
+        except Exception as e:
+            logging.error(f'"help_command private error:" {e}')
+    else:
+        try:
+            await message.answer(text)
+        except Exception as e:
+            logging.error(f'"help_command group error:" {e}')
