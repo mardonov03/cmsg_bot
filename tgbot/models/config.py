@@ -147,7 +147,10 @@ class GroupModel(MainModel):
     async def get_ban_words(self, groupid, message_type):
         try:
             async with self.pool.acquire() as conn:
-                result = await conn.fetch('SELECT message_id FROM ban_messages WHERE groupid = $1 AND message_type = $2', groupid, message_type)
+                if message_type != 'all':
+                    result = await conn.fetch('SELECT message_id FROM ban_messages WHERE groupid = $1 AND message_type = $2', groupid, message_type)
+                else:
+                    result = await conn.fetch('SELECT message_id FROM ban_messages WHERE groupid = $1', groupid)
             return result
         except Exception as e:
             logging.error(f'"get_ban_words error": {e}')
@@ -331,8 +334,33 @@ class MessagesModel(MainModel):
                     return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'bansticker': sticker_id}
                 return {'status': 'ok', 'groupid': groupid, 'is_banned': 'no', 'bansticker': ''}
         except Exception as e:
-            logging.error(f'"scan_message_text error": {e}')
+            logging.error(f'"scan_message_sticker error": {e}')
             return {'status': 'error', 'groupid': groupid,'is_banned': '', 'bansticker': ''}
+
+    async def scan_message_animation(self, gif_id, groupid):
+        try:
+            async with self.pool.acquire() as conn:
+                group_ban_stickers = await conn.fetch('SELECT message_id FROM ban_messages WHERE message_type = $1 AND groupid = $2', "animation", groupid)
+
+                if gif_id in [record['message_id'] for record in group_ban_stickers]:
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'bangif': gif_id}
+                return {'status': 'ok', 'groupid': groupid, 'is_banned': 'no', 'bangif': ''}
+        except Exception as e:
+            logging.error(f'"scan_message_animation error": {e}')
+            return {'status': 'error', 'groupid': groupid,'is_banned': '', 'bangif': ''}
+
+    async def scan_message_voice(self, voice_id, groupid):
+        try:
+            async with self.pool.acquire() as conn:
+                group_ban_stickers = await conn.fetch('SELECT message_id FROM ban_messages WHERE message_type = $1 AND groupid = $2', "voice", groupid)
+
+                if voice_id in [record['message_id'] for record in group_ban_stickers]:
+                    return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'voice': voice_id}
+                return {'status': 'ok', 'groupid': groupid, 'is_banned': 'no', 'voice': ''}
+        except Exception as e:
+            logging.error(f'"scan_message_voice error": {e}')
+            return {'status': 'error', 'groupid': groupid,'is_banned': '', 'voice': ''}
+
 
     def __get_word_variants(self, word):
         parsed_letters = []
