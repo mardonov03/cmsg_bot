@@ -4,11 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="updated 2">
+    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="docker full 2">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/handlers/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tgbot/keyboards/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/keyboards/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/models/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/models/config.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -340,7 +337,23 @@
       <option name="project" value="LOCAL" />
       <updated>1744745401413</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="docker full">
+      <option name="closed" value="true" />
+      <created>1744960307691</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1744960307691</updated>
+    </task>
+    <task id="LOCAL-00024" summary="docker full 2">
+      <option name="closed" value="true" />
+      <created>1744960340257</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1744960340257</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -364,6 +377,8 @@
     <MESSAGE value="settings 1.3 (full need to deep test) + user_agreement" />
     <MESSAGE value="updated 1" />
     <MESSAGE value="updated 2" />
-    <option name="LAST_COMMIT_MESSAGE" value="updated 2" />
+    <MESSAGE value="docker full" />
+    <MESSAGE value="docker full 2" />
+    <option name="LAST_COMMIT_MESSAGE" value="docker full 2" />
   </component>
 </project>
