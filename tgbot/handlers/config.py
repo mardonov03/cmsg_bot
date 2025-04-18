@@ -1,5 +1,5 @@
 import logging
-from tgbot.keyboards.config import group_list, cancel, settings_keyboard, agreement_keyboard
+from tgbot.keyboards.config import group_list, cancel, settings_keyboard, agreement_keyboard, group_ban_list
 from aiogram.types import Message, ChatMemberUpdated, CallbackQuery
 from tgbot.models.config import UsersModel, GroupModel, MessagesModel
 from aiogram.fsm.context import FSMContext
@@ -332,6 +332,27 @@ class CheckMessage():
                     if is_logs_on['logs'] is True:
                         await message.bot.send_message(userid, f'Banned sticker id: <b>{is_banned["bansticker"]}</b>', parse_mode='HTML')
                 return
+
+            if message.content_type == 'animation':
+
+                is_banned = await messagesmodel.scan_message_animation(message.animation.file_unique_id, message.chat.id)
+
+                if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
+                    await message.bot.delete_message(message.chat.id, message.message_id)
+                    if is_logs_on['logs'] is True:
+                        await message.bot.send_message(userid, f'Banned gif id: <b>{is_banned["bangif"]}</b>', parse_mode='HTML')
+                return
+
+            if message.content_type == 'voice':
+
+                is_banned = await messagesmodel.scan_message_voice(message.voice.file_unique_id, message.chat.id)
+
+                if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
+                    await message.bot.delete_message(message.chat.id, message.message_id)
+                    if is_logs_on['logs'] is True:
+                        await message.bot.send_message(userid, f'Banned voice id: <b>{is_banned["voice"]}</b>',parse_mode='HTML')
+                return
+
             if message.content_type == 'photo':
                 is_banned = await messagesmodel.scan_message_photo(message, message.chat.id)
                 if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
@@ -589,7 +610,7 @@ class RegisterMessage():
 
             try:
                 action_list = ['текст', 'стикер', 'гиф', 'голосовое', 'документ', 'фото', 'видео', 'видео кружок']
-                await message.answer('Список чего вам нужен?', reply_markup=group_list(action_list))
+                await message.answer('Список чего вам нужен?', reply_markup=group_ban_list(action_list))
                 await state.update_data(action_list=action_list, group_id=groupid, groupname= selected_group[0])
                 await state.set_state(UserState.get_ban_list_state_2)
             except Exception as e:
@@ -604,13 +625,13 @@ class RegisterMessage():
 
         data = await state.get_data()
 
-        if not message.text in data['action_list']:
+        if not message.text in data['action_list'] and not message.text == 'все':
             action_list = ['текст', 'стикер', 'гиф', 'голосовое', 'документ', 'фото', 'видео', 'видео кружок']
-            await message.answer('Неправильная комманда, пожалюста повторите ввод', reply_markup=group_list(action_list))
+            await message.answer('Неправильная комманда, пожалюста повторите ввод', reply_markup=group_ban_list(action_list))
             await state.set_state(UserState.get_ban_list_state_2)
             return
 
-        action_list_db_form = {'текст': 'text', 'стикер': 'sticker', 'гиф': 'animation', 'голосовое': 'voice', 'документ': 'document', 'фото': 'photo', 'видео': 'video', 'видео кружок': 'video_note'}
+        action_list_db_form = {'текст': 'text', 'стикер': 'sticker', 'гиф': 'animation', 'голосовое': 'voice', 'документ': 'document', 'фото': 'photo', 'видео': 'video', 'видео кружок': 'video_note', 'все': 'all'}
 
         action = action_list_db_form[message.text]
         groupid = data['group_id']
