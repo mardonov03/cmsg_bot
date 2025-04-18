@@ -233,7 +233,7 @@ class GroupModel(MainModel):
                     value = setting.replace('logs_', '')
 
                     new_value = True if value == 'False' else False
-                    print('new_value: ', new_value)
+
                     await conn.execute('UPDATE group_settings SET logs = $1 WHERE groupid = $2', new_value, groupid)
 
                 elif setting.startswith("nsfw_prots"):
