@@ -108,7 +108,7 @@ async def select_group_1(message:Message, state: FSMContext, **kwargs):
         except Exception as e:
             logging.error(f'"select_group_1 error": {e}')
 
-async def select_group(message:Message, state:FSMContext, **kwargs):
+async def select_group(message:Message, state:FSMContext, bot, **kwargs):
     if message.text == 'отмена':
         await state.clear()
         await message.answer('Вы отменили все действии.', reply_markup=cancel())
@@ -145,13 +145,19 @@ async def select_group(message:Message, state:FSMContext, **kwargs):
 
             usersmodel: UsersModel = kwargs['usersmodel']
 
-            if data['action'] and data['action']=='/remove':
+            if data['action'] and data['action'] in ['/remove', '/remove@PurifyAiBot']:
                 action = 'remove'
             else:
                 action = 'add'
             restult = await usersmodel.last_group_update(groupid, message.from_user.id, action)
             if restult:
-                await message.answer('Группа выбрана удачно', reply_markup=cancel())
+                group = await groupmodel.get_group(groupid)
+                if group['username']:
+                    invite_link = f"https://t.me/{group['username']}"
+                else:
+                    invite_link = await bot.export_chat_invite_link(groupid)
+                status = '➖ Удалить сообщение'  if action == 'remove' else '➕ Добавить сообщение'
+                await message.answer(f'✅ Группа <a href="{invite_link}"><b>{group["name"]}</b></a> выбрана удачно\n\n<b>Статус: {status}</b>', reply_markup=cancel(), disable_web_page_preview=True)
             else:
                 await message.answer('Нам не удалось выбрать группу', reply_markup=cancel())
             await state.clear()
@@ -860,23 +866,23 @@ async def handle_user_agreement_selected(callback_query: CallbackQuery, **kwargs
         logging.error(f'"handle_user_agreement_selected error": {e}')
         await callback_query.answer("Произошла ошибка. Попробуйте позже.", show_alert=True)
 
-async def help_command(message: Message):
-    text = (
-        "Я бот-модератор. Моя задача — удалять нежелательные сообщения, фото, гифки, стикеры и NSFW-контент.\n\n"
-        "Как пользоваться:\n"
-        "1. Добавь меня в группу и дай права администратора.\n"
-        "2. Напиши /start в личке, выбери группу.\n"
-        "3. Добавь слова, фразы, стикеры или гифки — я буду их удалять.\n\n"
-        "Я использую ИИ для распознавания NSFW на фото и скоро смогу проверять стикеры.\n"
-        "Работаю по списку админов группы и глобальному фильтру."
-    )
+async def info_command(message: Message):
+    text = ('ℹ️ Этот бот помогает администраторам Telegram-групп автоматически удалять нежелательные сообщения. Он работает следующим образом:\n\n'
+            '<b>Добавление в группу:</b>\nДобавьте бота в свою группу и предоставьте ему права администратора.\n\n'
+            '<b>Взаимодействие с ботом:</b>\nВ личном чате с ботом появится ваша группа. Вы можете выбрать её и настроить фильтрацию сообщений.\n\n'
+            '<b>Настройка фильтров:</b>\nДобавляйте слова, стикеры, GIF и другие элементы, которые бот будет удалять из выбранной группы.\n\n'
+            '<b>NSFW-фильтрация:</b>\nБот использует встроенную модель для распознавания NSFW-контента на изображениях и стикерах, удаляя их при обнаружении.\n\n'
+            '<b>Управление группами:</b>\nВы можете управлять несколькими группами одновременно, выбирая активную группу в личном чате с ботом.\n\n'
+            '<b>Пользовательское соглашение:</b>\n🇷🇺 Ru: <b><a href="https://telegra.ph/Polzovatelskoe-Soglashenie-PurifyAi-04-13-2">Пользовательское Соглашение</a></b>.\n\n🇺🇸 En: <b><a href="https://telegra.ph/User-Agreement-PurifyAi-04-13">User Agreement</a></b>.\n\n🇺🇿 Uz: <b><a href="https://telegra.ph/Foydalanuvchi-Shartnomasi-PurifyAi-04-13">Foydalanuvchi Shartnomasi</a></b>.')
     if message.chat.type == 'private':
         try:
-            await message.answer(text)
+            await message.answer(text, parse_mode='HTML', disable_web_page_preview=True)
         except Exception as e:
             logging.error(f'"help_command private error:" {e}')
     else:
+        if message.text != '/info@PurifyAiBot':
+            return
         try:
-            await message.answer(text)
+            await message.answer(text,parse_mode='HTML', disable_web_page_preview=True)
         except Exception as e:
             logging.error(f'"help_command group error:" {e}')
