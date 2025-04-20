@@ -107,5 +107,16 @@ async def init_db(pool):
                 );
             """)
 
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS message_cancel (
+                    groupid BIGINT REFERENCES groups(groupid) ON DELETE CASCADE,
+                    userid BIGINT REFERENCES users(userid) ON DELETE CASCADE,
+                    file_id TEXT NOT NULL,
+                    content_type TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    mesid BIGINT,
+                    PRIMARY KEY (mesid, userid)
+                );
+            """)
     except Exception as e:
         logging.error(f'"init_db error": {e}')

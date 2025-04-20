@@ -17,6 +17,8 @@ def setup() -> Router:
 
     router.callback_query.register(handle_user_agreement_selected, F.data.startswith("agreement_"))
 
+    router.callback_query.register(RegisterMessage.register_message_add_delete, F.data.startswith("cancel_"))
+
     router.my_chat_member.register(on_bot_added, ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))
 
     router.my_chat_member.register(register_creator, ChatMemberUpdatedFilter(ADMINISTRATOR))
