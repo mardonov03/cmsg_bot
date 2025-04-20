@@ -4,10 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="help command 1">
+    <list default="true" id="018a8c30-eb31-446a-98e4-bea3fea9ab42" name="Changes" comment="info updated 1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tgbot/database/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/database/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/handlers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tgbot/handlers/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/handlers/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tgbot/keyboards/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/keyboards/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tgbot/models/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tgbot/models/config.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -393,7 +396,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744975028706</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="info updated 1">
+      <option name="closed" value="true" />
+      <created>1744994441035</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1744994441035</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -421,6 +432,7 @@
     <MESSAGE value="docker full 2" />
     <MESSAGE value="deleted opencv2" />
     <MESSAGE value="help command 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="help command 1" />
+    <MESSAGE value="info updated 1" />
+    <option name="LAST_COMMIT_MESSAGE" value="info updated 1" />
   </component>
 </project>

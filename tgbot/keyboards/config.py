@@ -39,3 +39,9 @@ def agreement_keyboard():
             InlineKeyboardButton(text="❌ Нет, я не согласен", callback_data="agreement_no")
         ]
     ])
+
+def cencel_add_or_remove(data):
+    chatid = data[0]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ Отменить", callback_data=f"cancel_|{chatid}")]
+    ])
