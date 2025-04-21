@@ -463,6 +463,7 @@ class RegisterMessage():
                 else:
                     await message.answer('❌ Не удалось удалить из запретов.')
             elif action == 'add':
+                # file_id.lower() if content_type == 'text' else file_id
                 result = await messagesmodel.register_ban_message(groupid, content_type, file_id)
 
                 if result['status'] == 'ok':

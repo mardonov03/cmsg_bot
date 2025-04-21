@@ -300,17 +300,17 @@ class MessagesModel(MainModel):
 
             if len(message_text) >= 7 and ' ' not in message_text:
                 for banword in global_ban_words:
-                    if banword in words_no_duplicates:
+                    if banword.lower() in words_no_duplicates:
                         return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': banword}
                 for banword in group_ban_words:
-                    if banword in words_no_duplicates:
+                    if banword.lower() in words_no_duplicates:
                         return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'ok', 'banword': banword}
 
             for banword in global_ban_words:
-                if banword in all_combinations:
+                if banword.lower() in all_combinations:
                     return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no', 'banword': banword}
             for banword in group_ban_words:
-                if banword in all_combinations:
+                if banword.lower() in all_combinations:
                     return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'is_global': 'no', 'banword': banword}
 
             return {'status': 'ok', 'groupid': groupid,'is_banned': 'no', 'is_global': None,'banword': None}
@@ -386,6 +386,9 @@ class MessagesModel(MainModel):
     async def scan_message_photo(self, message, groupid):
         photo = message.photo[-1]
         photo_id = photo.file_unique_id
+
+        if message.caption:
+            await self.scan_message_text(message.caption, groupid)
 
         is_banned_global = await self.__check_global(photo_id, 'photo')
 
