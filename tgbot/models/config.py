@@ -259,7 +259,7 @@ class MessagesModel(MainModel):
         'x': ['х'],'c': ['ц'],'v': ['в'],'b': ['б'],'n': ['н'],'m': ['м'],'yo': ['е','ё'],'ya': ['я'],'yu': ['ю']
     }
 
-    kir_to_lat = { 'а': ['a'],'б': ['b'],'в': ['v'],'г': ['g'],'ғ': ['g'],'д': ['d'],'е': ['e', 'yo', 'y'],'ё': ['yo'],'ж': ['j'],
+    kir_to_lat = { 'а': ['a'],'б': ['b'],'в': ['v'],'г': ['g'],'ғ': ["g'"],'д': ['d'],'е': ['e', 'yo', 'y'],'ё': ['yo'],'ж': ['j'],
         'з': ['z'],'и': ['i'],'й': ['y'],'к': ['k'],'қ': ['q'],'л': ['l'],'м': ['m'],'н': ['n'],'ң': ['n'],'о': ['o'],'ө': ['o'],
         'п': ['p'],'р': ['r'],'с': ['s'],'т': ['t'],'у': ['u'],'ұ': ['u'],'ү': ['u'],'ф': ['f'],'х': ['h', 'x'],'ц': ['c'],
         'ч': ['c','ch'],'ш': ['w'],'щ': ['w'],'ъ': [],'ы': ['i'],'ь': [],'э': ['e'],'ю': ['yu'],'я': ['ya'], "к'": ['q']
@@ -281,12 +281,14 @@ class MessagesModel(MainModel):
             if message_text in global_white_rows:
                 return
 
-            message_filter = re.sub(r"[^a-zа-яёңұүөқғ\s']", '', message_text.lower())
+            message_filter = re.sub(r"[^a-zа-яёңұүөқғ\s'\U0001F600-\U0001F64F\u2600-\u26FF\u2700-\u27BF]", '', message_text.lower())
+
             message_filter_no_duplicates = re.sub(r'(.)\1+', r'\1', message_filter)
 
             words = message_filter.split()
             words_no_duplicates = message_filter_no_duplicates.split()
-
+            print(words)
+            print(words_no_duplicates)
             all_combinations = []
             for word in words + words_no_duplicates:
                 all_combinations.extend(self.__get_word_variants(word))
@@ -297,7 +299,8 @@ class MessagesModel(MainModel):
 
             global_ban_words = {row['message_id'] for row in global_ban_rows}
             group_ban_words = {row['message_id'] for row in group_ban_rows}
-
+            print({"group_ban_words": group_ban_words, "global_ban_words": global_ban_words})
+            print({"all_combinations": all_combinations})
             if len(message_text) >= 7 and ' ' not in message_text:
                 for banword in global_ban_words:
                     if banword.lower() in words_no_duplicates:
@@ -378,8 +381,10 @@ class MessagesModel(MainModel):
                 lat_to_kir = [k for k, v in self.kir_to_lat.items() if letter in v]
                 variants = [letter] + lat_to_kir
                 variants_per_letter.append(variants)
+            elif re.match(r'[\U0001F600-\U0001F64F\u2600-\u26FF\u2700-\u27BF]', letter):  # смайлы
+                variants_per_letter.append([letter])
             else:
-                variants_per_letter.append([''])
+                variants_per_letter.append([""])
 
         return [''.join(comb) for comb in itertools.product(*variants_per_letter)]
 
@@ -444,6 +449,7 @@ class MessagesModel(MainModel):
             return {'status': 'error', 'is_banned': False}
 
     async def register_ban_message(self, groupid, message_type, file_id):
+        print({"groupid": groupid, 'message_type': message_type, 'file_id': file_id})
         try:
             async with self.pool.acquire() as conn:
                 await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, file_id, message_type)
