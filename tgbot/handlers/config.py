@@ -36,7 +36,7 @@ async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
 
             is_user_creator = await groupmodel.is_user_creator(groupid, message.from_user.id)
 
-            if is_user_creator['result'] == 'creator':
+            if is_user_creator['result'] == 'creator' or (message.sender_chat and message.sender_chat.id  == groupid):
 
                 status = await groupmodel.turn_on_off_bot(groupid, True)
 
@@ -192,10 +192,9 @@ async def handle_stop(message: Message, **kwargs) -> None:
 
             if not result:
                 await groupmodel.add_group(groupid)
-
             is_user_creator = await groupmodel.is_user_creator(groupid, message.from_user.id)
 
-            if is_user_creator['result'] == 'creator':
+            if is_user_creator['result'] == 'creator' or (message.sender_chat and message.sender_chat.id  == groupid):
                 status = await groupmodel.turn_on_off_bot(groupid, False)
 
                 await message.answer('🟢 Бот включен!' if status is True else '🔴 Бот выключен!')
