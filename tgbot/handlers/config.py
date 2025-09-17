@@ -360,7 +360,8 @@ class CheckMessage():
                 return
 
             if message.content_type == 'photo':
-                is_banned = await messagesmodel.scan_message_photo(message, message.chat.id)
+                n2_model = kwargs['n2_model']
+                is_banned = await messagesmodel.scan_message_photo(message, message.chat.id, n2_model)
                 if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:

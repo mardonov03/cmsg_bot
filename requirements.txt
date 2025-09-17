@@ -7,3 +7,4 @@ betterlogging
 fastapi==0.115.3
 orjson==3.10.11
 uvicorn[standard]
+python-dotenv

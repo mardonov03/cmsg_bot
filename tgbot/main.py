@@ -11,6 +11,8 @@ from tgbot import handlers
 from tgbot.data import config
 from tgbot.database.config import create_pool, init_db
 from tgbot.models.config import MainModel, UsersModel, GroupModel, MessagesModel
+import opennsfw2 as n2
+
 
 async def setup_logging():
     log_level = logging.INFO
@@ -37,6 +39,8 @@ async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
         await bot.delete_webhook(drop_pending_updates=True)
         pool = await create_pool()
 
+        n2_model = n2.make_open_nsfw_model()
+
         mainmodel = MainModel(pool, bot)
         usersmodel = UsersModel(pool, bot)
         groupmodel = GroupModel(pool, bot)
@@ -47,6 +51,7 @@ async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
         dispatcher['usersmodel'] = usersmodel
         dispatcher['groupmodel'] = groupmodel
         dispatcher['messagesmodel'] = messagesmodel
+        dispatcher['n2_model'] = n2_model
 
         await init_db(pool)
         logging.info("Bot started")

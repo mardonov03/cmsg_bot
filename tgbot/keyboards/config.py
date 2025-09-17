@@ -26,9 +26,10 @@ def cancel():
     return ReplyKeyboardRemove()
 
 def settings_keyboard(settings: dict):
+    prots_list = {20: 'строгий', 40: 'средный', 60: 'не строгий'}
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"📜 Логи: {'✅' if settings.get('logs') else '❌'}",callback_data=f"toggle_logs_{str(settings.get('logs'))}_gid_{str(settings.get('groupid'))}")],
-        [InlineKeyboardButton(text=f"🔞 NSFW: {settings.get('nsfw_prots')}",callback_data=f"toggle_nsfw_prots_{str(settings.get('nsfw_prots'))}_gid_{str(settings.get('groupid'))}")],
+        [InlineKeyboardButton(text=f"🔞 NSFW: {prots_list[int(settings.get('nsfw_prots'))]}",callback_data=f"toggle_nsfw_prots_{str(settings.get('nsfw_prots'))}_gid_{str(settings.get('groupid'))}")],
         [InlineKeyboardButton(text="❌ Закрыть",callback_data=f"toggle_close_settings_gid_{str(settings.get('groupid'))}")]])
 
 
