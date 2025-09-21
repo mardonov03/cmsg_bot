@@ -5,8 +5,6 @@ services:
     build: .
     container_name: cmsg-bot
     restart: always
-    ports:
-      - "5000:5000"  # Пример, указываешь порты, которые нужны для взаимодействия с ботом
     environment:
       DB_USER: postgres
       DB_PASSWORD: REMOVED
@@ -25,3 +23,8 @@ services:
       POSTGRES_DB: cmsg
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
