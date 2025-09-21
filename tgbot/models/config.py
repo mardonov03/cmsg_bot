@@ -2,12 +2,12 @@ import datetime
 import logging
 import betterlogging as bl
 import os
-import opennsfw2 as n2
 import re
 import itertools
 from PIL import Image
 import opennsfw2 as n2
 import numpy as np
+import tensorflow as tf
 
 
 log_level = logging.INFO
@@ -419,14 +419,18 @@ class MessagesModel(MainModel):
             local_path = f"photos/temp_{photo.file_unique_id}.jpg"
             await message.bot.download_file(file_path, local_path)
 
-            with Image.open(local_path) as pil_img:
-                preprocessed = n2.preprocess_image(pil_img, n2.Preprocessing.YAHOO)
-            batch = np.expand_dims(preprocessed, axis=0)
+            try:
+                with Image.open(local_path) as pil_img:
+                    preprocessed = n2.preprocess_image(pil_img, n2.Preprocessing.YAHOO)
+                batch = np.expand_dims(preprocessed, axis=0)
 
-            preds = n2_model.predict(batch)
+                with tf.device('/CPU:0'):
+                    preds = n2_model.predict(batch)
+            finally:
+                if os.path.exists(local_path):
+                    os.remove(local_path)
+
             sfw_prob, nsfw_prob = preds[0]
-
-            os.remove(local_path)
 
             nsfw_int = round(nsfw_prob * 100)
             logging.info(f"NSFW probability: {nsfw_int}%")
@@ -444,6 +448,7 @@ class MessagesModel(MainModel):
         except Exception as e:
             logging.error(f'scan_message_photo error: {e}')
             return {'status': 'error', 'message_status': '', 'is_global': '', 'groupid': '', 'message_id': ''}
+
     async def __check_global(self, message_id, message_type):
         try:
             async with self.pool.acquire() as conn:
