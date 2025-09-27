@@ -476,7 +476,8 @@ class MessagesModel(MainModel):
                     batch = np.expand_dims(preprocessed, axis=0)
 
                     with tf.device('/CPU:0'):
-                        preds = n2_model.predict(batch)
+                        preds = n2_model(tf.convert_to_tensor(batch, dtype=tf.float32))
+                        preds = preds.numpy()
                 finally:
                     if os.path.exists(local_path):
                         os.remove(local_path)
@@ -513,9 +514,7 @@ class MessagesModel(MainModel):
                 return {'status': 'error', 'message_status': '', 'is_global': '',
                         'groupid': '', 'message_id': ''}
             finally:
-                del batch, preprocessed, pil_img, preds
-                gc.collect()
-                await asyncio.sleep(3)
+                del batch, preprocessed, preds
 
     async def __check_global(self, message_id, message_type):
         try:
