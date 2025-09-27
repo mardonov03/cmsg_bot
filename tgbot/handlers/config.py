@@ -1,11 +1,12 @@
 import logging
 from tgbot.keyboards.config import group_list, cancel, settings_keyboard, agreement_keyboard, group_ban_list, cencel_add_or_remove
 from aiogram.types import Message, ChatMemberUpdated, CallbackQuery
-from tgbot.models.config import UsersModel, GroupModel, MessagesModel
+from tgbot.models.config import UsersModel, GroupModel, MessagesModel, MainModel
 from aiogram.fsm.context import FSMContext
 from tgbot.states.config import UserState, SettingsState
 from datetime import datetime, timedelta
 from typing import Union
+from aiogram.types import FSInputFile
 
 async def handle_start(message: Message, state: FSMContext, **kwargs) -> None:
     if message.chat.type in ['group', 'supergroup']:
@@ -853,3 +854,20 @@ async def info_command(message: Message):
             await message.answer(text,parse_mode='HTML', disable_web_page_preview=True)
         except Exception as e:
             logging.error(f'"help_command group error:" {e}')
+
+
+async def handle_get_db(message: Message, state: FSMContext, **kwargs):
+    if message.chat.type == 'private':
+        if not message.from_user.id == 1524961622:
+            return
+        try:
+            mainmodel: MainModel = kwargs['mainmodel']
+
+            db_path = await mainmodel.get_db()
+
+            file = FSInputFile(db_path)
+            await message.answer_document(file)
+            await mainmodel.delete_csv(db_path)
+            await state.set_state(UserState.select_group_state)
+        except Exception as e:
+            logging.error(f'"handle_start error (group):" {e}')

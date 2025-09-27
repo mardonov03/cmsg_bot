@@ -9,6 +9,8 @@ import opennsfw2 as n2
 import numpy as np
 import tensorflow as tf
 import asyncio
+import gc
+import csv
 
 log_level = logging.INFO
 bl.basic_colorized_config(level=log_level)
@@ -18,6 +20,44 @@ class MainModel:
     def __init__(self, pool, bot):
         self.pool = pool
         self.bot = bot
+
+    async def get_db(self, output_dir="exports"):
+        os.makedirs(output_dir, exist_ok=True)
+        csv_path = os.path.join(output_dir, f"{datetime.datetime.today().strftime('%Y-%m-%d_%H-%M-%S')}.csv")
+
+        try:
+            async with self.pool.acquire() as conn:
+                tables = await conn.fetch("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
+
+                with open(csv_path, "w", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+
+                    for table in tables:
+                        table_name = table["table_name"]
+
+                        rows = await conn.fetch(f'SELECT * FROM "{table_name}";')
+                        if not rows:
+                            continue
+
+                        columns = rows[0].keys()
+
+                        writer.writerow([f"### {table_name} ###"])
+                        writer.writerow(columns)
+
+                        for row in rows:
+                            writer.writerow(row.values())
+
+                        writer.writerow([])
+        except Exception as e:
+            logger.error(f'"get_user error: {e}')
+        return csv_path
+
+    async def delete_csv(self, csv_path: str):
+        try:
+            os.remove(csv_path)
+        except Exception as e:
+            logging.error(f"delete_csv error: {e}")
+
 
 class UsersModel(MainModel):
     async def __add_user(self, userid):
@@ -392,7 +432,7 @@ class MessagesModel(MainModel):
     semaphore = asyncio.Semaphore(LIMIT)
 
     async def scan_message_photo(self, message, groupid, n2_model):
-        async with self.semaphore:  # <= ограничение одновременных задач
+        async with self.semaphore:
             photo = message.photo[-1]
             photo_id = photo.file_unique_id
 
@@ -473,6 +513,8 @@ class MessagesModel(MainModel):
                 return {'status': 'error', 'message_status': '', 'is_global': '',
                         'groupid': '', 'message_id': ''}
             finally:
+                del batch, preprocessed, pil_img, preds
+                gc.collect()
                 await asyncio.sleep(3)
 
     async def __check_global(self, message_id, message_type):
