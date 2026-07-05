@@ -14,9 +14,14 @@ services:
       DB_HOST: db
     depends_on:
       - db
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512m
 
   db:
-    image: postgres:latest
+    image: postgres:15-alpine
     container_name: cmsg-db
     restart: always
     env_file:
@@ -25,10 +30,16 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: cmsg
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1g
 
 volumes:
   postgres_data:

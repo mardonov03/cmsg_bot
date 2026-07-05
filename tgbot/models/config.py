@@ -449,64 +449,66 @@ class MessagesModel(MainModel):
                         'groupid': groupid,
                         'message_id': photo.file_unique_id
                     }
-                # async with self.pool.acquire() as conn:
-                #     result = await conn.fetchval('SELECT 1 FROM ban_messages WHERE groupid = $1 AND message_type = $2 AND message_id = $3', groupid, message.content_type, photo_id)
-                #     if result:
-                #         return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
-                #
-                #     nsfw_prots_group = await conn.fetchval('SELECT nsfw_prots FROM group_settings WHERE groupid = $1', groupid)
-                #
-                # os.makedirs("photos", exist_ok=True)
-                # file_info = await message.bot.get_file(photo.file_id)
-                # file_path = file_info.file_path
-                # local_path = f"photos/temp_{photo.file_unique_id}.jpg"
-                # await message.bot.download_file(file_path, local_path)
-                #
-                # try:
-                #     with Image.open(local_path) as pil_img:
-                #         preprocessed = n2.preprocess_image(pil_img, n2.Preprocessing.YAHOO)
-                #     batch = np.expand_dims(preprocessed, axis=0)
-                #
-                #     with tf.device('/CPU:0'):
-                #         preds = n2_model(tf.convert_to_tensor(batch, dtype=tf.float32))
-                #         preds = preds.numpy()
-                # finally:
-                #     if os.path.exists(local_path):
-                #         os.remove(local_path)
-                #
-                # sfw_prob, nsfw_prob = preds[0]
-                # nsfw_int = round(nsfw_prob * 100)
-                # logging.info(f"NSFW probability: {nsfw_int}%")
-                #
-                # if nsfw_int >= 60:
-                #     async with self.pool.acquire() as conn:
-                #         await conn.execute(
-                #             'INSERT INTO global_ban_messages (message_id, message_type) VALUES ($1, $2) '
-                #             'ON CONFLICT (message_id, message_type) DO NOTHING',
-                #             photo_id, 'photo'
-                #         )
-                #     return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok',
-                #             'groupid': groupid, 'message_id': photo.file_unique_id}
-                #
-                # elif nsfw_int >= nsfw_prots_group:
-                #     async with self.pool.acquire() as conn:
-                #         await conn.execute(
-                #             'INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) '
-                #             'ON CONFLICT (groupid, message_id, message_type) DO NOTHING',
-                #             groupid, photo_id, 'photo'
-                #         )
-                #     return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no',
-                #             'groupid': groupid, 'message_id': photo.file_unique_id}
-                #
-                # return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no',
-                #         'groupid': groupid, 'message_id': photo.file_unique_id}
+                async with self.pool.acquire() as conn:
+                    result = await conn.fetchval('SELECT 1 FROM ban_messages WHERE groupid = $1 AND message_type = $2 AND message_id = $3', groupid, message.content_type, photo_id)
+                    if result:
+                        return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
+
+                    nsfw_prots_group = await conn.fetchval('SELECT nsfw_prots FROM group_settings WHERE groupid = $1', groupid)
+
+                os.makedirs("photos", exist_ok=True)
+                file_info = await message.bot.get_file(photo.file_id)
+                file_path = file_info.file_path
+                local_path = f"photos/temp_{photo.file_unique_id}.jpg"
+                await message.bot.download_file(file_path, local_path)
+
+                try:
+                    with Image.open(local_path) as pil_img:
+                        preprocessed = n2.preprocess_image(pil_img, n2.Preprocessing.YAHOO)
+                    batch = np.expand_dims(preprocessed, axis=0)
+
+                    with tf.device('/CPU:0'):
+                        preds = n2_model(tf.convert_to_tensor(batch, dtype=tf.float32))
+                        preds = preds.numpy()
+                finally:
+                    if os.path.exists(local_path):
+                        os.remove(local_path)
+
+                sfw_prob, nsfw_prob = preds[0]
+                nsfw_int = round(nsfw_prob * 100)
+                logging.info(f"NSFW probability: {nsfw_int}%")
+
+                if nsfw_int >= 60:
+                    async with self.pool.acquire() as conn:
+                        await conn.execute(
+                            'INSERT INTO global_ban_messages (message_id, message_type) VALUES ($1, $2) '
+                            'ON CONFLICT (message_id, message_type) DO NOTHING',
+                            photo_id, 'photo'
+                        )
+                    return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok',
+                            'groupid': groupid, 'message_id': photo.file_unique_id}
+
+                elif nsfw_int >= nsfw_prots_group:
+                    async with self.pool.acquire() as conn:
+                        await conn.execute(
+                            'INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) '
+                            'ON CONFLICT (groupid, message_id, message_type) DO NOTHING',
+                            groupid, photo_id, 'photo'
+                        )
+                    return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no',
+                            'groupid': groupid, 'message_id': photo.file_unique_id}
+                return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no',
+                        'groupid': groupid, 'message_id': photo.file_unique_id}
 
             except Exception as e:
                 logging.error(f'scan_message_photo error: {e}')
                 return {'status': 'error', 'message_status': '', 'is_global': '',
                         'groupid': '', 'message_id': ''}
-            # finally:
-            #     del batch, preprocessed, preds
+            finally:
+                for var in ['batch', 'preprocessed', 'preds']:
+                    if var in dir():
+                        del var
+                gc.collect()
 
     async def __check_global(self, message_id, message_type):
         try:
