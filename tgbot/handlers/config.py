@@ -323,6 +323,8 @@ class CheckMessage():
 
             is_logs_on = await groupmodel.is_logs_on(groupid)
 
+            n2_model = kwargs['n2_model']
+
             if message.content_type == 'text':
                 result = await messagesmodel.scan_message_text(message.text, groupid)
                 if result['status'] == 'ok':
@@ -332,7 +334,7 @@ class CheckMessage():
                             await message.bot.send_message(userid, f'Banned word: {str(result["banword"])}', parse_mode='HTML')
                 return
             if message.content_type == 'sticker':
-                is_banned = await messagesmodel.scan_message_sticker(message.sticker.file_unique_id, message.chat.id)
+                is_banned = await messagesmodel.scan_message_sticker(message, message.chat.id, n2_model)
 
                 if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
                     await message.bot.delete_message(message.chat.id, message.message_id)
@@ -361,7 +363,6 @@ class CheckMessage():
                 return
 
             if message.content_type == 'photo':
-                n2_model = kwargs['n2_model']
                 is_banned = await messagesmodel.scan_message_photo(message, message.chat.id, n2_model)
                 if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)

@@ -52,7 +52,7 @@ tgbot/
 
 ## Notes
 
-- NSFW detection can be toggled on/off per group
+- NSFW sensitivity is adjustable per group via `/settings` (strict / medium / relaxed)
 - Ban list matching works on exact content — text, `file_unique_id` for stickers/audio, and ML-based classification for images
 
 ## Feedback & Bug Reports
