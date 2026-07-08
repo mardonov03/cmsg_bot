@@ -337,12 +337,14 @@ class CheckMessage():
                             await message.bot.send_message(creator, f'Banned word: {str(result["banword"])}', parse_mode='HTML')
                 return
             if message.content_type == 'sticker':
-                is_banned = await messagesmodel.scan_message_sticker(message, message.chat.id, n2_model)
+                is_banned = await messagesmodel.scan_message_sticker(message, message.chat.id)
 
                 if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:
                         await message.bot.send_message(creator, f'Banned sticker id: <b>{is_banned["bansticker"]}</b>', parse_mode='HTML')
+                else:
+                    await asyncio.create_task(CheckMessage.check_nsfw_and_delete(message, n2_model, messagesmodel, groupmodel))
                 return
 
             if message.content_type == 'animation':
@@ -366,13 +368,13 @@ class CheckMessage():
                 return
 
             if message.content_type == 'photo':
-                is_banned_db = await messagesmodel.scan_message_photo(message, message.chat.id, n2_model)
+                is_banned_db = await messagesmodel.scan_message_photo(message, message.chat.id)
                 if is_banned_db['status'] == 'ok' and is_banned_db['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)
+                    if is_logs_on['logs'] is True:
+                        await message.bot.send_message(creator, f'Banned photo id: <b>{is_banned_db["message_id"]}</b>', parse_mode='HTML')
                 else:
                     await asyncio.create_task(CheckMessage.check_nsfw_and_delete(message, n2_model, messagesmodel, groupmodel))
-                if is_logs_on['logs'] is True:
-                    await message.bot.send_message(creator, f'Banned photo id: <b>{is_banned_db["message_id"]}</b>', parse_mode='HTML')
                 return
         except Exception:
             logging.exception('error: ')

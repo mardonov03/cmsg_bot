@@ -371,7 +371,7 @@ class MessagesModel(MainModel):
             logging.error(f'"scan_message_text error": {e}')
             return {'status': 'error', 'groupid': groupid,'is_banned': '', 'is_global': '', 'banword': ''}
 
-    async def scan_message_sticker(self, message, groupid, n2_model):
+    async def scan_message_sticker(self, message, groupid):
         try:
             async with self.pool.acquire() as conn:
                 sticker_id = message.sticker.file_unique_id
@@ -379,6 +379,7 @@ class MessagesModel(MainModel):
 
                 if sticker_id in [record['message_id'] for record in group_ban_stickers]:
                     return {'status': 'ok', 'groupid': groupid, 'is_banned': 'ok', 'bansticker': sticker_id}
+                return {'status': 'ok', 'is_banned': 'no'}
         except Exception as e:
             logging.error(f'"scan_message_sticker error": {e}')
             return {'status': 'error', 'groupid': groupid,'is_banned': '', 'bansticker': ''}
