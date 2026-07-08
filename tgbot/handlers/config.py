@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from tgbot.keyboards.config import group_list, cancel, settings_keyboard, agreement_keyboard, group_ban_list, cencel_add_or_remove
 from aiogram.types import Message, ChatMemberUpdated, CallbackQuery
@@ -322,6 +323,8 @@ class CheckMessage():
             messagesmodel: MessagesModel = kwargs['messagesmodel']
 
             is_logs_on = await groupmodel.is_logs_on(groupid)
+            creator = await groupmodel.get_creator(message.chat.id)
+
 
             n2_model = kwargs['n2_model']
 
@@ -331,7 +334,7 @@ class CheckMessage():
                     if result['is_banned'] == 'ok':
                         await message.bot.delete_message(groupid, message.message_id)
                         if is_logs_on['logs'] is True:
-                            await message.bot.send_message(userid, f'Banned word: {str(result["banword"])}', parse_mode='HTML')
+                            await message.bot.send_message(creator, f'Banned word: {str(result["banword"])}', parse_mode='HTML')
                 return
             if message.content_type == 'sticker':
                 is_banned = await messagesmodel.scan_message_sticker(message, message.chat.id, n2_model)
@@ -339,7 +342,7 @@ class CheckMessage():
                 if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:
-                        await message.bot.send_message(userid, f'Banned sticker id: <b>{is_banned["bansticker"]}</b>', parse_mode='HTML')
+                        await message.bot.send_message(creator, f'Banned sticker id: <b>{is_banned["bansticker"]}</b>', parse_mode='HTML')
                 return
 
             if message.content_type == 'animation':
@@ -349,7 +352,7 @@ class CheckMessage():
                 if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:
-                        await message.bot.send_message(userid, f'Banned gif id: <b>{is_banned["bangif"]}</b>', parse_mode='HTML')
+                        await message.bot.send_message(creator, f'Banned gif id: <b>{is_banned["bangif"]}</b>', parse_mode='HTML')
                 return
 
             if message.content_type == 'voice':
@@ -359,18 +362,33 @@ class CheckMessage():
                 if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:
-                        await message.bot.send_message(userid, f'Banned voice id: <b>{is_banned["voice"]}</b>',parse_mode='HTML')
+                        await message.bot.send_message(creator, f'Banned voice id: <b>{is_banned["voice"]}</b>',parse_mode='HTML')
                 return
 
             if message.content_type == 'photo':
-                is_banned = await messagesmodel.scan_message_photo(message, message.chat.id, n2_model)
-                if is_banned['status'] == 'ok' and is_banned['message_status'] == 'ban':
+                is_banned_db = await messagesmodel.scan_message_photo(message, message.chat.id, n2_model)
+                if is_banned_db['status'] == 'ok' and is_banned_db['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)
-                    if is_logs_on['logs'] is True:
-                        await message.bot.send_message(userid, f'Banned photo id: <b>{is_banned["message_id"]}</b>', parse_mode='HTML')
+                else:
+                    await asyncio.create_task(CheckMessage.check_nsfw_and_delete(message, n2_model))
+                if is_logs_on['logs'] is True:
+                    await message.bot.send_message(creator, f'Banned photo id: <b>{is_banned_db["message_id"]}</b>', parse_mode='HTML')
                 return
         except Exception as e:
             logging.error(f'"check_message error": {e}')
+
+    @staticmethod
+    async def check_nsfw_and_delete(message, n2_model, **kwargs):
+        messagesmodel: MessagesModel = kwargs['messagesmodel']
+        nsfw_detect = await messagesmodel.nsfw_detect(message, n2_model)
+        if nsfw_detect['status'] == 'ok' and nsfw_detect['message_status'] == 'ban':
+            await message.bot.delete_message(message.chat.id, message.message_id)
+
+            groupmodel: GroupModel = kwargs['groupmodel']
+            is_logs_on = await groupmodel.is_logs_on(message.chat.id)
+            if is_logs_on['logs'] is True:
+                creator = await groupmodel.get_creator(message.chat.id)
+                await message.bot.send_message(creator, f'Banned photo id: <b>{nsfw_detect["message_id"]}</b>', parse_mode='HTML')
 
 
 class RegisterMessage():
