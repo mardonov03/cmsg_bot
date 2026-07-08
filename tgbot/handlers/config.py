@@ -286,7 +286,7 @@ async def register_creator(event: ChatMemberUpdated, **kwargs) -> None:
 
 class CheckMessage():
     @staticmethod
-    async def check_message(message: Message, state: FSMContext, bot, **kwargs) -> None:
+    async def check_message(message: Message, **kwargs) -> None:
         groupid = message.chat.id
         userid = message.from_user.id
         try:
@@ -370,21 +370,19 @@ class CheckMessage():
                 if is_banned_db['status'] == 'ok' and is_banned_db['message_status'] == 'ban':
                     await message.bot.delete_message(message.chat.id, message.message_id)
                 else:
-                    await asyncio.create_task(CheckMessage.check_nsfw_and_delete(message, n2_model))
+                    await asyncio.create_task(CheckMessage.check_nsfw_and_delete(message, n2_model, messagesmodel, groupmodel))
                 if is_logs_on['logs'] is True:
                     await message.bot.send_message(creator, f'Banned photo id: <b>{is_banned_db["message_id"]}</b>', parse_mode='HTML')
                 return
-        except Exception as e:
-            logging.error(f'"check_message error": {e}')
+        except Exception:
+            logging.exception('error: ')
 
     @staticmethod
-    async def check_nsfw_and_delete(message, n2_model, **kwargs):
-        messagesmodel: MessagesModel = kwargs['messagesmodel']
+    async def check_nsfw_and_delete(message, n2_model, messagesmodel, groupmodel):
         nsfw_detect = await messagesmodel.nsfw_detect(message, n2_model)
         if nsfw_detect['status'] == 'ok' and nsfw_detect['message_status'] == 'ban':
             await message.bot.delete_message(message.chat.id, message.message_id)
 
-            groupmodel: GroupModel = kwargs['groupmodel']
             is_logs_on = await groupmodel.is_logs_on(message.chat.id)
             if is_logs_on['logs'] is True:
                 creator = await groupmodel.get_creator(message.chat.id)

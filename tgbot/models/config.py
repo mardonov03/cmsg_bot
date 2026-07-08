@@ -11,9 +11,7 @@ import tensorflow as tf
 import asyncio
 import gc
 import csv
-
-from pyexpat.errors import messages
-from watchfiles import awatch
+import uuid
 
 log_level = logging.INFO
 bl.basic_colorized_config(level=log_level)
@@ -440,7 +438,7 @@ class MessagesModel(MainModel):
         return [''.join(comb) for comb in itertools.product(*variants_per_letter)]
 
 
-    async def scan_message_photo(self, message, groupid, n2_model):
+    async def scan_message_photo(self, message, groupid):
         photo = message.photo[-1]
         photo_id = photo.file_unique_id
 
@@ -461,11 +459,13 @@ class MessagesModel(MainModel):
                 result = await conn.fetchval('SELECT 1 FROM ban_messages WHERE groupid = $1 AND message_type = $2 AND message_id = $3', groupid, message.content_type, photo_id)
                 if result:
                     return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
+                return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
+
         except Exception as e:
             logging.error(f'scan_message_photo error: {e}')
             return {'status': 'error', 'message_status': '', 'is_global': '', 'groupid': '', 'message_id': ''}
 
-    LIMIT = 1 ## 1 for test. real: 10+
+    LIMIT = 10 ## 1 for test. real: 10+
     semaphore = asyncio.Semaphore(LIMIT)
 
     async def nsfw_detect(self, message, n2_model):
@@ -479,7 +479,7 @@ class MessagesModel(MainModel):
                     os.makedirs("photos", exist_ok=True)
                     file_info = await message.bot.get_file(photo.file_id)
                     file_path = file_info.file_path
-                    local_path = f"photos/temp_{photo.file_unique_id}.jpg"
+                    local_path = f"photos/{uuid.uuid4()}.jpg"
                     await message.bot.download_file(file_path, local_path)
 
                     try:
@@ -507,14 +507,14 @@ class MessagesModel(MainModel):
                         elif nsfw_int >= nsfw_prots_group:
                             await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, photo_id, 'photo')
                             return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
-                        return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no',
-                                'groupid': groupid, 'message_id': photo.file_unique_id}
+                        return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
 
                 elif message.content_type == 'sticker':
                     pass
 
         except Exception as e:
-            logging.error(f'__nsfw_detect error: {e}')
+            logging.error(f'nsfw_detect error: {e}')
+            return {'status': 'error', 'message_status': '', 'is_global': '', 'groupid': '', 'message_id': ''}
         finally:
             for var in ['batch', 'preprocessed', 'preds']:
                 if var in dir():
