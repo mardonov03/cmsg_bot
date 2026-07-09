@@ -511,7 +511,43 @@ class MessagesModel(MainModel):
                         return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no', 'groupid': groupid, 'message_id': photo.file_unique_id}
 
                 elif message.content_type == 'sticker':
-                    pass
+                    sticker = message.sticker
+                    sticker_id = sticker.file_unique_id
+                    groupid = message.chat.id
+
+                    os.makedirs("stickers", exist_ok=True)
+                    file_info = await message.bot.get_file(sticker.file_id)
+                    file_path = file_info.file_path
+                    local_path = f"stickers/{uuid.uuid4()}.jpg"
+                    await message.bot.download_file(file_path, local_path)
+
+                    try:
+                        with Image.open(local_path) as pil_img:
+                            preprocessed = n2.preprocess_image(pil_img, n2.Preprocessing.YAHOO)
+                        batch = np.expand_dims(preprocessed, axis=0)
+
+                        with tf.device('/CPU:0'):
+                            preds = n2_model(tf.convert_to_tensor(batch, dtype=tf.float32))
+                            preds = preds.numpy()
+                    finally:
+                        if os.path.exists(local_path):
+                            os.remove(local_path)
+
+                    sfw_prob, nsfw_prob = preds[0]
+                    nsfw_int = round(nsfw_prob * 100)
+                    logging.info(f"NSFW probability sticker: {nsfw_int}%")
+
+                    async with self.pool.acquire() as conn:
+                        nsfw_prots_group = await conn.fetchval('SELECT nsfw_prots FROM group_settings WHERE groupid = $1', groupid)
+                        if nsfw_int >= 60:
+                            await conn.execute('INSERT INTO global_ban_messages (message_id, message_type) VALUES ($1, $2) ON CONFLICT (message_id, message_type) DO NOTHING', sticker_id, 'sticker')
+                            return {'status': 'ok', 'message_status': 'ban', 'is_global': 'ok', 'groupid': groupid, 'message_id': sticker.file_unique_id}
+
+                        elif nsfw_int >= nsfw_prots_group:
+                            await conn.execute('INSERT INTO ban_messages (groupid, message_id, message_type) VALUES ($1, $2, $3) ON CONFLICT (groupid, message_id, message_type) DO NOTHING', groupid, sticker_id, 'sticker')
+                            return {'status': 'ok', 'message_status': 'ban', 'is_global': 'no', 'groupid': groupid, 'message_id': sticker.file_unique_id}
+                        return {'status': 'ok', 'message_status': 'not_ban', 'is_global': 'no', 'groupid': groupid, 'message_id': sticker.file_unique_id}
+
 
         except Exception as e:
             logging.error(f'nsfw_detect error: {e}')
