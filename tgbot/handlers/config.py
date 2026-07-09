@@ -343,12 +343,12 @@ class CheckMessage():
                     await message.bot.delete_message(message.chat.id, message.message_id)
                     if is_logs_on['logs'] is True:
                         await message.bot.send_message(creator, f'Banned sticker id: <b>{is_banned["bansticker"]}</b>', parse_mode='HTML')
-                else:
+
+                if not message.sticker.is_video and not message.sticker.is_animated:
                     await asyncio.create_task(CheckMessage.check_nsfw_and_delete(message, n2_model, messagesmodel, groupmodel))
                 return
 
             if message.content_type == 'animation':
-
                 is_banned = await messagesmodel.scan_message_animation(message.animation.file_unique_id, message.chat.id)
 
                 if is_banned['status'] == 'ok' and is_banned['is_banned'] == 'ok':
